@@ -382,7 +382,7 @@ class CafeMenuScreen(MDScreen):
                 # size_hint=(None, None),
                 # size=(dp(30), dp(30))
             )
-            pop_button.bind(on_release=lambda x, p=product: self.pop_from_cart(x, p))
+            pop_button.bind(on_release=lambda x, p=product.product_id, s=product.selected_size: self.pop_from_cart(x, p, s))
 
             # Поле для отображения количества в корзине
             quantity_label = MDLabel(
@@ -543,16 +543,16 @@ class CafeMenuScreen(MDScreen):
             app.cart.append(cart_item)
 
         self.update_cart_counter()
-        self.update_card_counter(button, product)
+        self.update_card_counter(button, product.product_id)
 
     # Метод удаления из корзины
-    def pop_from_cart(self, button, product):
+    def pop_from_cart(self, button, product_id, size):
         app = MDApp.get_running_app()
 
         # Находим продукт в корзине
         item_to_remove = None
         for item in app.cart:
-            if item.product_id == product.product_id and item.size == product.selected_size:
+            if item.product_id == product_id and item.size == size:
                 item_to_remove = item
                 break
 
@@ -563,7 +563,7 @@ class CafeMenuScreen(MDScreen):
                 app.cart.remove(item_to_remove)
 
         self.update_cart_counter()
-        self.update_card_counter(button, product)
+        self.update_card_counter(button, product_id)
 
     # Вспомогательный метод для форматирования отображения размера
     def format_size_display(self, size):
@@ -577,10 +577,10 @@ class CafeMenuScreen(MDScreen):
             else:
                 return f"{size / 1000:.1f}л"
 
-    def update_card_counter(self, button, product):
+    def update_card_counter(self, button, product_id):
         app = MDApp.get_running_app()
 
-        amount = sum(item.quantity for item in app.cart if item.product_id == product.product_id)
+        amount = sum(item.quantity for item in app.cart if item.product_id == product_id)
 
         button.parent.parent.parent.children[0].children[0].children[1].text = str(amount)
 
@@ -658,7 +658,7 @@ class CafeMenuScreen(MDScreen):
                 # size_hint=(None, None),
                 # size=(dp(30), dp(30))
             )
-            # pop_button.bind(on_release=lambda x, p=product: self.pop_from_cart(x, p))
+            pop_button.bind(on_release=lambda x, p=cart_item.product_id, s=cart_item.size: self.pop_from_cart(x, p, s))
 
             # Поле для отображения количества в корзине
             quantity_label = MDLabel(

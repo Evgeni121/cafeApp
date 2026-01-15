@@ -4,9 +4,11 @@ import datetime
 class CartItem:
     """Элемент корзины"""
 
-    def __init__(self, product_id, name, price, quantity=1):
+    def __init__(self, product_id, name, size, size_unit, price, quantity=1):
         self.product_id = product_id
         self.name = name
+        self.size = size
+        self.size_unit = size_unit
         self.price = price
         self.quantity = quantity
 

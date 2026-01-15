@@ -149,14 +149,10 @@ class BaristaMenuScreen(MDScreen):
         dialog.dismiss()
 
         app = MDApp.get_running_app()
-        app.current_barista = self.barista
-        app.shift_open = True
-        app.cart_items = []
-        app.orders = []
-        app.order_counter = 1
+        app.barista = self.barista
 
         # Создаем новую смену
-        app.current_shift = Shift(app.current_barista)
+        app.current_shift = Shift(app.barista)
         if not hasattr(app, 'shifts_history'):
             app.shifts_history = []
         app.shifts_history.append(app.current_shift)
@@ -164,7 +160,7 @@ class BaristaMenuScreen(MDScreen):
         self.manager.current = "main_menu"
 
         cafe_screen = self.manager.get_screen("main_menu")
-        cafe_screen.update_for_barista(app.current_barista)
+        cafe_screen.update_for_barista(app.barista)
 
         MDSnackbar(
             MDSnackbarText(text=f"Смена открыта для бариста {self.barista.name}", theme_text_color="Custom",

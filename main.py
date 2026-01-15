@@ -1,10 +1,12 @@
+from typing import Optional
+
 from kivy.core.window import Window
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 
-from barista_menu import BaristaMenuScreen
+from barista_menu import BaristaMenuScreen, Barista
 from login_menu import LoginMenuScreen
-from main_menu import CafeMenuScreen
+from main_menu import CafeMenuScreen, Product
 
 PINK_COLOR = "pink"
 TEXT_COLOR = "black"
@@ -13,19 +15,22 @@ BACKGROUND_COLOR = "white"
 
 # ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 class PigBankApp(MDApp):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.barista: Optional[Barista] = None
+
+        self.shift = None
+
+        self.cart: [Product] = []
+
+        self.orders = []
+
     def build(self):
         Window.size = (600, 750)
 
         self.theme_cls.theme_style = "Light"
         self.theme_cls.primary_palette = "Pink"
-
-        self.current_barista = None
-        self.shift_open = False
-        self.cart_items = []
-        self.orders = []
-        self.order_counter = 1
-        self.current_shift = None
-        self.shifts_history = []
 
         screen_manager = MDScreenManager()
         screen_manager.add_widget(LoginMenuScreen())

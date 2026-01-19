@@ -618,6 +618,7 @@ class CafeMenuScreen(MDScreen):
             return
 
         self.scroll_view.clear_widgets()
+        # self.scroll_view.scroll_y = 1.0
 
         cart_content = MDBoxLayout(
             orientation="vertical",

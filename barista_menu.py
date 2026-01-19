@@ -152,10 +152,10 @@ class BaristaMenuScreen(MDScreen):
         app.barista = self.barista
 
         # Создаем новую смену
-        app.current_shift = Shift(app.barista)
+        app.shift = Shift(app.barista)
         if not hasattr(app, 'shifts_history'):
             app.shifts_history = []
-        app.shifts_history.append(app.current_shift)
+        app.shifts_history.append(app.shift)
 
         self.manager.current = "main_menu"
 

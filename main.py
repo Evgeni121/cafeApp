@@ -25,6 +25,7 @@ class PigBankApp(MDApp):
         self.cart: [Product] = []
 
         self.orders = []
+        self.order_counter = 0
 
     def build(self):
         Window.size = (600, 750)

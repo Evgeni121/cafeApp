@@ -10,41 +10,7 @@ from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
-from headers import Shift
-
-
-PRIMARY_COLOR = "pink"
-SECONDARY_COLOR = "lavenderblush"
-THIRD_COLOR = "snow"
-
-
-class Barista:
-    def __init__(self, barista_id, name):
-        self._barista_id = barista_id
-        self._name = name
-
-    @property
-    def barista_id(self):
-        return self._barista_id
-
-    @barista_id.setter
-    def barista_id(self, barista_id):
-        self._barista_id = barista_id
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name
-
-
-BARISTAS = [
-    Barista(1, "Дашка"),
-    Barista(2, "Кристина"),
-    Barista(3, "Грета"),
-]
+from headers import Shift, Barista, BARISTAS, SECONDARY_COLOR, THIRD_COLOR
 
 
 class BaristaMenuScreen(MDScreen):
@@ -52,8 +18,6 @@ class BaristaMenuScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = "barista_menu"
         self.md_bg_color = "white"
-
-        self.barista = None
 
         main_layout = MDBoxLayout(
             orientation="vertical",
@@ -115,11 +79,9 @@ class BaristaMenuScreen(MDScreen):
         self.add_widget(main_layout)
 
     def select_barista(self, barista: Barista):
-        self.barista = barista
-
         dialog = MDDialog(
             MDDialogHeadlineText(text="Открыть смену", theme_text_color="Custom", text_color="black"),
-            MDDialogSupportingText(text=f"Открыть смену для бариста {self.barista.name}?",
+            MDDialogSupportingText(text=f"Открыть смену для бариста {barista.name}?",
                                    theme_text_color="Custom", text_color="black"),
             MDDialogButtonContainer(
                 MDWidget(),
@@ -135,7 +97,7 @@ class BaristaMenuScreen(MDScreen):
                     style="filled",
                     theme_bg_color="Custom",
                     md_bg_color="pink",
-                    on_release=lambda x: self.confirm_open_shift(dialog)
+                    on_release=lambda x, b=barista: self.confirm_open_shift(dialog, b)
                 ),
             ),
 
@@ -145,17 +107,12 @@ class BaristaMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def confirm_open_shift(self, dialog):
+    def confirm_open_shift(self, dialog, barista: Barista):
         dialog.dismiss()
 
         app = MDApp.get_running_app()
-        app.barista = self.barista
-
-        # Создаем новую смену
+        app.barista = barista
         app.shift = Shift(app.barista)
-        if not hasattr(app, 'shifts_history'):
-            app.shifts_history = []
-        app.shifts_history.append(app.shift)
 
         self.manager.current = "main_menu"
 
@@ -163,8 +120,11 @@ class BaristaMenuScreen(MDScreen):
         cafe_screen.update_for_barista(app.barista)
 
         MDSnackbar(
-            MDSnackbarText(text=f"Смена открыта для бариста {self.barista.name}", theme_text_color="Custom",
-                           text_color="black"),
+            MDSnackbarText(
+                text=f"Смена открыта для бариста {barista.name}",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
             y=dp(24),
             pos_hint={"center_x": 0.5},
             size_hint_x=0.8,

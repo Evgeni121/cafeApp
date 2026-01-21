@@ -1,4 +1,3 @@
-from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDButton, MDButtonText
 from kivymd.uix.label import MDLabel
 from kivymd.uix.relativelayout import MDRelativeLayout
@@ -7,7 +6,6 @@ from kivymd.uix.screen import MDScreen
 
 # ========== ЭКРАН ВХОДА ==========
 class LoginMenuScreen(MDScreen):
-    """Главный экран"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

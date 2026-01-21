@@ -5,12 +5,9 @@ from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 
 from barista_menu import BaristaMenuScreen, Barista
+from headers import Shift, CartItem, Cart
 from login_menu import LoginMenuScreen
-from main_menu import CafeMenuScreen, Product
-
-PINK_COLOR = "pink"
-TEXT_COLOR = "black"
-BACKGROUND_COLOR = "white"
+from main_menu import CafeMenuScreen
 
 
 # ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
@@ -18,14 +15,12 @@ class PigBankApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.cart: Optional[Cart] = Cart()
+
         self.barista: Optional[Barista] = None
+        self.shift: Optional[Shift] = None
 
-        self.shift = None
-
-        self.cart: [Product] = []
-
-        self.orders = []
-        self.order_counter = 0
+        self.shifts: [Shift] = None
 
     def build(self):
         Window.size = (600, 750)

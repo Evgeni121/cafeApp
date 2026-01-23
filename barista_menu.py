@@ -2,9 +2,11 @@ from kivy.metrics import dp
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDButton, MDButtonText, MDButtonIcon
+from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialogButtonContainer, MDDialog, MDDialogHeadlineText, MDDialogSupportingText
 from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDListItem, MDListItemHeadlineText, MDList
+from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
@@ -19,13 +21,7 @@ class BaristaMenuScreen(MDScreen):
         self.name = "barista_menu"
         self.md_bg_color = "white"
 
-        main_layout = MDBoxLayout(
-            orientation="vertical",
-            padding=15,
-            spacing=15,
-            size_hint=(0.8, 0.9),
-            pos_hint={"center_x": 0.5, "center_y": 0.5}
-        )
+        main_layout = MDRelativeLayout()
 
         title = MDLabel(
             text="Укажите бариста",
@@ -35,32 +31,43 @@ class BaristaMenuScreen(MDScreen):
             theme_text_color="Custom",
             text_color="black",
             adaptive_height=True,
+            pos_hint={"center_x": 0.5, "center_y": 0.9},
         )
 
-        scroll_view = MDScrollView()
-        list_view = MDList()
+        list_view = MDList(
+            padding=10,
+            spacing=15,
+            size_hint=(0.65, 0.8),
+            pos_hint={"center_x": 0.5, "center_y": 0.7},
+        )
 
         for i, barista in enumerate(BARISTAS):
-            bg_color = SECONDARY_COLOR if i % 2 == 0 else THIRD_COLOR
-
-            item = MDListItem(
-                MDListItemHeadlineText(text=barista.name, theme_text_color="Custom", text_color="black", bold=False),
-                theme_bg_color="Custom",
-                md_bg_color=bg_color,
-                on_release=lambda x, b=barista: self.select_barista(b),
+            item = MDCard(
                 size_hint_y=None,
-                height="60dp"
+                height="60dp",
+                style="elevated",
+                theme_bg_color="Custom",
+                md_bg_color=THIRD_COLOR,
+                # theme_shadow_offset="Custom",
+                # shadow_offset=(1, -2),
+                # theme_shadow_softness="Custom",
+                # shadow_softness=1,
+                theme_elevation_level="Custom",
+                elevation_level=1,
+                on_release=lambda x, b=barista: self.select_barista(b),
             )
+
+            barista_label = MDLabel(
+                text=barista.name,
+                theme_text_color="Custom",
+                text_color="black",
+                halign="center",
+                size_hint_x=0.9,
+            )
+
+            item.add_widget(barista_label)
+
             list_view.add_widget(item)
-
-        scroll_view.add_widget(list_view)
-
-        bottom_container = MDBoxLayout(
-            orientation="vertical",
-            size_hint_y=None,
-            height="70dp",
-            padding=[0, 10, 0, 0]
-        )
 
         back_button = MDButton(
             MDButtonIcon(icon="arrow-left-bold", theme_text_color="Custom", text_color="black"),
@@ -68,14 +75,13 @@ class BaristaMenuScreen(MDScreen):
             style="filled",
             theme_bg_color="Custom",
             md_bg_color="pink",
-            pos_hint={"center_x": 0.5}
+            pos_hint={"center_x": 0.5, "center_y": 0.05},
         )
         back_button.bind(on_release=self.go_back)
-        bottom_container.add_widget(back_button)
 
         main_layout.add_widget(title)
-        main_layout.add_widget(scroll_view)  # Просто ScrollView вместо Card
-        main_layout.add_widget(bottom_container)
+        main_layout.add_widget(list_view)
+        main_layout.add_widget(back_button)
         self.add_widget(main_layout)
 
     def select_barista(self, barista: Barista):

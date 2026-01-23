@@ -8,7 +8,6 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialogButtonContainer, MDDialogHeadlineText, MDDialog, MDDialogSupportingText, \
     MDDialogContentContainer
 from kivymd.uix.divider import MDDivider
-from kivymd.uix.dropdownitem import MDDropDownItem, MDDropDownItemText
 from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDListItemHeadlineText, MDListItem, MDList
 from kivymd.uix.menu import MDDropdownMenu
@@ -18,7 +17,8 @@ from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
-from headers import Order, Barista, SECONDARY_COLOR, TOP_APP_BAR_COLOR, FOURTH_COLOR, CATEGORIES, PRODUCTS, Category
+from headers import Order, Barista, SECONDARY_COLOR, TOP_APP_BAR_COLOR, FOURTH_COLOR, CATEGORIES, PRODUCTS, Category, \
+    THIRD_COLOR
 
 
 class CafeMenuScreen(MDScreen):
@@ -167,18 +167,19 @@ class CafeMenuScreen(MDScreen):
         products = sorted([p for p in PRODUCTS if p.category_id == self.selected_category.category_id], key=lambda x: x.name)
 
         for product in products:
-            # Создаем карточку продукта
             card = MDCard(
                 orientation="vertical",
-                size_hint_y=None,
+                size_hint=(1, None),
                 height=dp(120),
                 padding=[dp(10), dp(5), dp(10), dp(5)],
                 spacing=dp(10),
-                elevation=2,
                 radius=[dp(10), dp(10), dp(10), dp(10)],
                 theme_bg_color="Custom",
-                md_bg_color=SECONDARY_COLOR,
-                style="filled"
+                md_bg_color=THIRD_COLOR,
+                style="elevated",
+                theme_elevation_level="Custom",
+                elevation_level=1,
+                pos_hint={"center_y": 0.6}
             )
 
             card_layout = MDRelativeLayout()
@@ -339,14 +340,16 @@ class CafeMenuScreen(MDScreen):
         self.products_list = MDList(
             padding=15,
             spacing=15,
-            size_hint=(0.95, 0.95),
+            size_hint=(0.95, 1),
             pos_hint={"center_x": 0.5, "center_y": 0.5},
+            # theme_bg_color="Custom",
+            # md_bg_color=FOURTH_COLOR
         )
 
         self.cart_button = MDButton(
             MDButtonIcon(
                 icon="cart",
-                pos_hint={"center_x": 0.44, "center_y": 0.5},
+                pos_hint={"center_x": 0.42, "center_y": 0.5},
                 theme_text_color="Custom",
                 text_color="black"),
             MDButtonText(
@@ -354,7 +357,7 @@ class CafeMenuScreen(MDScreen):
                 text="0 BYN",
                 theme_text_color="Custom",
                 text_color="black",
-                pos_hint={"center_x": 0.56, "center_y": 0.5}
+                pos_hint={"center_x": 0.58, "center_y": 0.5}
             ),
             style="filled",
             theme_bg_color="Custom",
@@ -362,7 +365,7 @@ class CafeMenuScreen(MDScreen):
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             height="50dp",
             theme_width="Custom",
-            size_hint=(0.8, 0.8),
+            size_hint=(0.5, 0.8),
             on_release=self.show_cart
         )
 
@@ -663,7 +666,8 @@ class CafeMenuScreen(MDScreen):
                 ),
             ),
             theme_bg_color="Custom",
-            md_bg_color="white"
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
         )
         dialog.open()
 
@@ -712,7 +716,8 @@ class CafeMenuScreen(MDScreen):
                 ),
             ),
             theme_bg_color="Custom",
-            md_bg_color="white"
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
         )
         dialog.open()
 
@@ -789,14 +794,14 @@ class CafeMenuScreen(MDScreen):
             )
 
             details_button = MDIconButton(
-                icon="more",
+                icon="dots-vertical",
                 style="standard",
                 theme_bg_color="Custom",
                 md_bg_color="white",
                 theme_icon_color="Custom",
-                icon_color=SECONDARY_COLOR
+                icon_color="black"
             )
-            details_button.bind(on_release=lambda x: self.show_order_details(order))
+            details_button.bind(on_release=lambda x, o=order: self.show_order_details(o))
 
             order_header.add_widget(order_id_label)
             order_header.add_widget(order_time)
@@ -864,7 +869,8 @@ class CafeMenuScreen(MDScreen):
                 ),
             ),
             theme_bg_color="Custom",
-            md_bg_color="white"
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
         )
         dialog.open()
 
@@ -950,7 +956,6 @@ class CafeMenuScreen(MDScreen):
             size_hint_y=None,
             height=dp(50),
             spacing=dp(10),
-            halign="right"
         )
 
         total_title = MDLabel(
@@ -960,7 +965,6 @@ class CafeMenuScreen(MDScreen):
             bold=True,
             font_size="18sp",
             size_hint_x=0.5,
-            halign="right"
         )
 
         total_value = MDLabel(
@@ -969,7 +973,8 @@ class CafeMenuScreen(MDScreen):
             text_color="black",
             bold=True,
             font_size="22sp",
-            size_hint_x=0.3
+            size_hint_x=0.3,
+            halign="right"
         )
 
         footer_box.add_widget(total_title)
@@ -982,8 +987,7 @@ class CafeMenuScreen(MDScreen):
         main_container.add_widget(MDDivider())
         main_container.add_widget(footer_box)
 
-        # Создаем диалог
-        self.order_details_dialog = MDDialog(
+        order_details_dialog = MDDialog(
             MDDialogHeadlineText(
                 text="Детали заказа",
                 theme_text_color="Custom",
@@ -993,28 +997,26 @@ class CafeMenuScreen(MDScreen):
                 MDScrollView(
                     main_container,
                     size_hint=(1, None),
-                    height=dp(min(400, 150 + len(order.items) * 40))
+                    height=dp(300)
                 ),
                 orientation="vertical",
             ),
             MDDialogButtonContainer(
                 MDWidget(),
                 MDButton(
-                    MDButtonText(text="ОК"),
-                    style="filled",
-                    theme_bg_color="Custom",
-                    md_bg_color=SECONDARY_COLOR,
-                    on_release=lambda x: self.order_details_dialog.dismiss()
+                    MDButtonText(text="Закрыть", theme_text_color="Custom", text_color="black"),
+                    style="text",
+                    on_release=lambda x: order_details_dialog.dismiss()
                 ),
             ),
             size_hint=(0.85, None),
-            height=dp(min(500, 200 + len(order.items) * 45)),
+            height=dp(min(300, 200 + len(order.items) * 45)),
             theme_bg_color="Custom",
             md_bg_color="white",
-            radius=[20, 20, 20, 20]
+            radius=[5, 5, 5, 5],
         )
 
-        self.order_details_dialog.open()
+        order_details_dialog.open()
 
     def show_shifts_history(self):
         """Показать историю смен"""
@@ -1139,7 +1141,8 @@ class CafeMenuScreen(MDScreen):
                     on_release=lambda x: dialog.dismiss()
                 ),
             ),
-            size_hint=(0.9, 0.8)
+            size_hint=(0.9, 0.8),
+            radius = [5, 5, 5, 5],
         )
         dialog.open()
 

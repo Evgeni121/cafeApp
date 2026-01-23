@@ -109,6 +109,8 @@ class CafeMenuScreen(MDScreen):
     def categories_panel_list_update(self):
         self.categories_list.clear_widgets()
 
+        self.categories_list.add_widget(MDDivider())
+
         for category in CATEGORIES:
             item = MDListItem(
                 # MDListItemLeadingIcon(icon=category["icon"]),
@@ -116,15 +118,19 @@ class CafeMenuScreen(MDScreen):
                     text=category.name,
                     theme_text_color="Custom",
                     text_color="black",
+                    font_style="Title",
+                    role="small",
+                    bold=False
                 ),
                 theme_bg_color="Custom",
-                md_bg_color="pink" if category == self.selected_category else FOURTH_COLOR,
+                md_bg_color="pink" if category == self.selected_category else TOP_APP_BAR_COLOR,
                 on_release=lambda x, cat=category: self.select_category(cat),
                 size_hint_y=None,
                 height="60dp"
             )
 
             self.categories_list.add_widget(item)
+            self.categories_list.add_widget(MDDivider())
 
     def categories_panel_init(self):
         self.categories_panel = MDBoxLayout(
@@ -132,9 +138,9 @@ class CafeMenuScreen(MDScreen):
             size_hint=(0.25, 1),
             padding=5,
             spacing=5,
-            radius=[5, 5, 5, 5],
+            radius=[10, 10, 10, 10],
             theme_bg_color="Custom",
-            md_bg_color=FOURTH_COLOR
+            md_bg_color=TOP_APP_BAR_COLOR
         )
 
         categories_label = MDLabel(
@@ -142,9 +148,9 @@ class CafeMenuScreen(MDScreen):
             halign="center",
             theme_text_color="Custom",
             text_color="black",
-            size_hint_y=None,
-            height="50dp",
-            font_size="20sp",
+            adaptive_height=True,
+            font_style="Title",
+            role="medium",
             bold=True
         )
 
@@ -317,10 +323,12 @@ class CafeMenuScreen(MDScreen):
         self.products_panel = MDBoxLayout(
             orientation="vertical",
             size_hint=(0.75, 1.0),
+            padding=5,
             spacing=10,
+            radius=[10, 10, 10, 10],
             pos_hint={"center_x": 0.5, "center_y": 0.5},
-            theme_bg_color="Primary",
-            # md_bg_color=SECONDARY_COLOR
+            theme_bg_color="Custom",
+            md_bg_color=TOP_APP_BAR_COLOR
         )
 
         self.products_label = MDLabel(
@@ -329,12 +337,9 @@ class CafeMenuScreen(MDScreen):
             theme_text_color="Custom",
             text_color="black",
             adaptive_height=True,
-            font_style="Headline",
-            role="small",
-            bold=True,
-            radius=(5, 5, 5, 5),
-            theme_bg_color="Custom",
-            md_bg_color=FOURTH_COLOR
+            font_style="Title",
+            role="medium",
+            bold=True
         )
 
         self.products_list = MDList(

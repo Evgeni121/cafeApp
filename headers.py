@@ -3,8 +3,8 @@ from datetime import datetime
 PRIMARY_COLOR = "pink"
 SECONDARY_COLOR = "lavenderblush"
 THIRD_COLOR = "snow"
-FOURTH_COLOR = "gainsboro"
-TOP_APP_BAR_COLOR = "silver"
+FOURTH_COLOR = "snow"
+TOP_APP_BAR_COLOR = "white"
 
 
 class Category:

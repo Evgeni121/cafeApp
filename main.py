@@ -20,7 +20,7 @@ class PigBankApp(MDApp):
         self.barista: Optional[Barista] = None
         self.shift: Optional[Shift] = None
 
-        self.shifts: [Shift] = None
+        self.shifts: [Shift] = []
 
     def build(self):
         Window.size = (600, 750)

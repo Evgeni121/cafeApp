@@ -130,7 +130,10 @@ class BaristaMenuScreen(MDScreen):
 
         app = MDApp.get_running_app()
         app.barista = barista
-        app.shift = Shift(app.barista)
+        shift = Shift(app.barista)
+
+        app.shift = shift
+        app.shifts.append(shift)
 
         self.manager.current = "main_menu"
 

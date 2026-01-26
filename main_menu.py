@@ -67,7 +67,7 @@ class CafeMenuScreen(MDScreen):
             {
                 "text": "Смены",
                 "leading_icon": "clock-time-three",
-                "on_release": self.show_shifts_history,
+                "on_release": self.show_shifts,
             },
         ]
 
@@ -354,7 +354,16 @@ class CafeMenuScreen(MDScreen):
             bottom_row.add_widget(buttons_container)
             card.add_widget(bottom_row)
 
-            self.products_list.add_widget(card)
+            card_container = MDBoxLayout(
+                orientation="vertical",
+                padding=[5, 0, 0, 0],
+                size_hint=(1, None),
+                height=dp(120),
+            )
+
+            card_container.add_widget(card)
+
+            self.products_list.add_widget(card_container)
 
     def products_panel_init(self):
         self.products_panel = MDBoxLayout(
@@ -517,11 +526,8 @@ class CafeMenuScreen(MDScreen):
             card_quantity_label.text = str(product_amount)
 
     def reset_card_counter(self):
-        for card in self.products_list.children:
-            if isinstance(card, MDCard):
-                label = card.children[0].children[0].children[1]
-                if isinstance(label, MDLabel):
-                    label.text = "0"
+        for val in self.product_card_quantity_labels.values():
+            val.text = "0"
 
     def update_cart_counter(self):
         app = MDApp.get_running_app()
@@ -782,12 +788,14 @@ class CafeMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def show_order_history(self):
+    def show_order_history(self, shift_orders=None):
         self.toolbar_menu.dismiss()
 
         app = MDApp.get_running_app()
 
-        if not app.shift.orders:
+        orders = shift_orders or app.shift.orders
+
+        if not orders:
             MDSnackbar(
                 MDSnackbarText(text="История заказов пуста", theme_text_color="Custom", text_color="black"),
                 y=dp(24),
@@ -809,7 +817,7 @@ class CafeMenuScreen(MDScreen):
 
         total = 0
 
-        for order in reversed(app.shift.orders[-10:]):
+        for order in reversed(orders[-10:]):
             order_card = MDBoxLayout(
                 orientation="vertical",
                 spacing=dp(10),
@@ -1079,13 +1087,12 @@ class CafeMenuScreen(MDScreen):
 
         order_details_dialog.open()
 
-    def show_shifts_history(self):
-        """Показать историю смен"""
+    def show_shifts(self):
         self.toolbar_menu.dismiss()
 
         app = MDApp.get_running_app()
 
-        if not hasattr(app, 'shifts_history') or not app.shifts_history:
+        if not hasattr(app, 'shifts') or not app.shifts:
             MDSnackbar(
                 MDSnackbarText(text="История смен пуста", theme_text_color="Custom", text_color="black"),
                 y=dp(24),
@@ -1097,112 +1104,139 @@ class CafeMenuScreen(MDScreen):
             ).open()
             return
 
-        history_content = MDBoxLayout(orientation="vertical", spacing=10, size_hint_y=None)
+        history_content = MDBoxLayout(
+            orientation="vertical",
+            padding=10,
+            size_hint_y=None
+        )
         history_content.bind(minimum_height=history_content.setter('height'))
 
-        for shift in reversed(app.shifts_history[-5:]):  # Последние 5 смен
-            shift_data = shift.to_dict()
+        total = 0
 
-            shift_card = MDCard(
+        for shift in reversed(app.shifts[-10:]):
+            order_card = MDBoxLayout(
                 orientation="vertical",
+                spacing=dp(10),
                 padding=10,
-                size_hint_y=None,
-                height="120dp",
-                elevation=1,
-                md_bg_color=(0.98, 0.98, 0.98, 1)
+                adaptive_height=True
             )
 
-            # Заголовок смены
-            shift_header = MDBoxLayout(orientation="horizontal", size_hint_y=None, height="30dp")
-            barista_label = MDLabel(
-                text=f"👤 {shift_data['barista']}",
+            order_header = MDBoxLayout(
+                orientation="horizontal",
+                adaptive_height=True
+            )
+
+            order_id_label = MDLabel(
+                text=f"Смена {shift.start_time.strftime("%d.%m.%Y")}",
                 theme_text_color="Custom",
                 text_color="black",
                 bold=True,
                 size_hint_x=0.6
             )
-            status_label = MDLabel(
-                text=f"🟢 Активна" if shift_data['status'] == "active" else f"🔴 Завершена",
+
+            order_time = MDLabel(
+                text=f"{shift.start_time.strftime("%H:%M")} - "
+                     f"{shift.end_time.strftime("%H:%M") if shift.end_time else "Не закрыта"}",
                 theme_text_color="Custom",
-                text_color="green" if shift_data['status'] == "active" else "red",
+                text_color="black",
                 halign="right",
+                font_size="12sp",
                 size_hint_x=0.4
             )
 
-            shift_header.add_widget(barista_label)
-            shift_header.add_widget(status_label)
-            shift_card.add_widget(shift_header)
+            if shift.end_time:
+                total += shift.end_time.timestamp() - shift.start_time.timestamp()
 
-            # Время смены
-            time_layout = MDBoxLayout(orientation="horizontal", size_hint_y=None, height="25dp")
-            start_time = MDLabel(
-                text=f"🕒 Начало: {shift_data['start_time']}",
-                theme_text_color="Custom",
-                text_color="black",
-                size_hint_x=0.5
-            )
-            end_time = MDLabel(
-                text=f"⏰ Конец: {shift_data['end_time']}" if shift_data['end_time'] else "⏳ В процессе",
-                theme_text_color="Custom",
-                text_color="black",
-                halign="right",
-                size_hint_x=0.5
+            order_details_header = MDBoxLayout(
+                orientation="horizontal",
+                adaptive_height=True
             )
 
-            time_layout.add_widget(start_time)
-            time_layout.add_widget(end_time)
-            shift_card.add_widget(time_layout)
-
-            # Статистика смены
-            stats_layout = MDBoxLayout(orientation="horizontal", size_hint_y=None, height="25dp")
-            orders_label = MDLabel(
-                text=f"📦 Заказов: {shift_data['orders_count']}",
+            order_details = MDLabel(
+                text=f"{len(shift.orders)} заказов на сумму {shift.total_revenue} BYN",
                 theme_text_color="Custom",
                 text_color="black",
-                size_hint_x=0.5
-            )
-            revenue_label = MDLabel(
-                text=f"💰 Выручка: {shift_data['revenue']} BYN",
-                theme_text_color="Custom",
-                text_color="black",
-                halign="right",
-                size_hint_x=0.5
+                size_hint_y=None,
+                height="30dp"
             )
 
-            stats_layout.add_widget(orders_label)
-            stats_layout.add_widget(revenue_label)
-            shift_card.add_widget(stats_layout)
+            details_button = MDIconButton(
+                icon="dots-vertical",
+                style="standard",
+                theme_bg_color="Custom",
+                md_bg_color="white",
+                theme_icon_color="Custom",
+                icon_color="black"
+            )
+            details_button.bind(on_release=lambda x: self.show_order_history(shift.orders))
 
-            # Длительность смены (если есть)
-            if shift_data['duration']:
-                duration_label = MDLabel(
-                    text=f"⏱ Длительность: {shift_data['duration']}",
-                    theme_text_color="Custom",
-                    text_color="black",
-                    size_hint_y=None,
-                    height="25dp"
-                )
-                shift_card.add_widget(duration_label)
+            order_header.add_widget(order_id_label)
+            order_header.add_widget(order_time)
 
-            history_content.add_widget(shift_card)
+            order_details_header.add_widget(order_details)
+            order_details_header.add_widget(details_button)
 
-        scroll_view = MDScrollView(size_hint=(1, 0.7))
+            order_card.add_widget(order_header)
+            order_card.add_widget(order_details_header)
+
+            history_content.add_widget(order_card)
+
+        scroll_view = MDScrollView(
+            size_hint=(1, None),
+            height=dp(300)
+        )
+
         scroll_view.add_widget(history_content)
 
+        total_layout = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(60),
+            spacing=5,
+            padding=[5, 5, 15, 5],
+        )
+
+        total_label = MDLabel(
+            text="Всего:",
+            theme_text_color="Custom",
+            text_color="black",
+            font_size=dp(20),
+            bold=True,
+            size_hint_x=0.5
+        )
+
+        cart_total_value_label = MDLabel(
+            text=f"{total // 3600} часов",
+            theme_text_color="Custom",
+            text_color="black",
+            font_size=dp(20),
+            bold=True,
+            halign="right",
+            size_hint_x=0.5
+        )
+
+        total_layout.add_widget(total_label)
+        total_layout.add_widget(cart_total_value_label)
+
         dialog = MDDialog(
-            MDDialogHeadlineText(text="Смены", theme_text_color="Custom", text_color="black"),
-            scroll_view,
+            MDDialogHeadlineText(text="История смен", theme_text_color="Custom", text_color="black"),
+            MDDialogContentContainer(
+                MDDivider(),
+                scroll_view,
+                MDDivider(),
+                total_layout,
+                orientation="vertical",
+            ),
             MDDialogButtonContainer(
                 MDWidget(),
                 MDButton(
                     MDButtonText(text="Закрыть", theme_text_color="Custom", text_color="black"),
-                    style="filled",
-                    theme_bg_color="Custom",
-                    md_bg_color="pink",
+                    style="text",
                     on_release=lambda x: dialog.dismiss()
                 ),
             ),
-            size_hint=(0.9, 0.8),
+            theme_bg_color="Custom",
+            md_bg_color="white",
             radius=[5, 5, 5, 5],
         )
         dialog.open()

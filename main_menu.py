@@ -1091,8 +1091,9 @@ class CafeMenuScreen(MDScreen):
         self.toolbar_menu.dismiss()
 
         app = MDApp.get_running_app()
+        shifts = [shift for shift in app.shifts if shift.barista.barista_id == app.barista.barista_id]
 
-        if not hasattr(app, 'shifts') or not app.shifts:
+        if not hasattr(app, 'shifts') or not shifts:
             MDSnackbar(
                 MDSnackbarText(text="История смен пуста", theme_text_color="Custom", text_color="black"),
                 y=dp(24),
@@ -1113,7 +1114,7 @@ class CafeMenuScreen(MDScreen):
 
         total = 0
 
-        for shift in reversed(app.shifts[-10:]):
+        for shift in reversed(shifts[-10:]):
             order_card = MDBoxLayout(
                 orientation="vertical",
                 spacing=dp(10),
@@ -1168,7 +1169,7 @@ class CafeMenuScreen(MDScreen):
                 theme_icon_color="Custom",
                 icon_color="black"
             )
-            details_button.bind(on_release=lambda x: self.show_order_history(shift.orders))
+            details_button.bind(on_release=lambda x, o=shift.orders: self.show_order_history(o))
 
             order_header.add_widget(order_id_label)
             order_header.add_widget(order_time)
@@ -1255,10 +1256,9 @@ class CafeMenuScreen(MDScreen):
 
         dialog = MDDialog(
             MDDialogHeadlineText(text="Закрыть смену", theme_text_color="Custom", text_color="black"),
-            MDDialogSupportingText(text=f"Бариста: {app.barista.name}\n\n"
+            MDDialogSupportingText(text="Желаете закрыть смену?\n\n"
                                         f"Заказов за смену: {total_orders}\n"
-                                        f"Выручка: {total_revenue} BYN\n\n"
-                                        f"Желаете закрыть смену?",
+                                        f"Выручка: {total_revenue} BYN",
                                    theme_text_color="Custom", text_color="black"),
             MDDialogButtonContainer(
                 MDWidget(),

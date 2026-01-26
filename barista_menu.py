@@ -26,8 +26,8 @@ class BaristaMenuScreen(MDScreen):
         title = MDLabel(
             text="Укажите бариста",
             halign="center",
-            font_style="Headline",
-            role="small",
+            # font_style="Headline",
+            # role="small",
             theme_text_color="Custom",
             text_color="black",
             adaptive_height=True,
@@ -37,14 +37,14 @@ class BaristaMenuScreen(MDScreen):
         list_view = MDList(
             padding=10,
             spacing=15,
-            size_hint=(0.65, 0.8),
+            size_hint=(0.6, 0.6),
             pos_hint={"center_x": 0.5, "center_y": 0.7},
         )
 
         for i, barista in enumerate(BARISTAS):
             item = MDCard(
                 size_hint_y=None,
-                height="60dp",
+                height="50dp",
                 style="elevated",
                 theme_bg_color="Custom",
                 md_bg_color=THIRD_COLOR,
@@ -61,6 +61,8 @@ class BaristaMenuScreen(MDScreen):
                 text=barista.name,
                 theme_text_color="Custom",
                 text_color="black",
+                font_style="Title",
+                role="small",
                 halign="center",
                 size_hint_x=0.9,
             )
@@ -70,17 +72,27 @@ class BaristaMenuScreen(MDScreen):
             list_view.add_widget(item)
 
         back_button = MDButton(
-            MDButtonIcon(icon="arrow-left-bold", theme_text_color="Custom", text_color="black"),
+            MDButtonIcon(icon="arrow-left", theme_text_color="Custom", text_color="black"),
             MDButtonText(text="Назад", theme_text_color="Custom", text_color="black"),
-            style="filled",
+            style="elevated",
             theme_bg_color="Custom",
             md_bg_color="pink",
             pos_hint={"center_x": 0.5, "center_y": 0.05},
         )
         back_button.bind(on_release=self.go_back)
 
-        main_layout.add_widget(title)
-        main_layout.add_widget(list_view)
+        layout = MDBoxLayout(
+            orientation="vertical",
+            padding=5,
+            spacing=5,
+            pos_hint={"center_x": 0.5, "center_y": 0.9},
+        )
+
+        layout.add_widget(title)
+        layout.add_widget(list_view)
+
+        main_layout.add_widget(layout)
+
         main_layout.add_widget(back_button)
         self.add_widget(main_layout)
 

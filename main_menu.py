@@ -14,6 +14,7 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.segmentedbutton import MDSegmentedButton, MDSegmentedButtonItem, MDSegmentButtonLabel
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
@@ -25,7 +26,7 @@ class CafeMenuScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = "main_menu"
-        self.md_bg_color = "white"
+        self.md_bg_color = "whitesmoke"
 
         self.top_app_bar = None
         self.toolbar_menu = None
@@ -107,9 +108,46 @@ class CafeMenuScreen(MDScreen):
         self.toolbar_menu_init()
 
     def categories_panel_list_update(self):
-        self.categories_list.clear_widgets()
+        for child in self.categories_list.children:
+            if isinstance(child, MDListItem):
+                child.md_bg_color = "pink" if child.id == self.selected_category.name else TOP_APP_BAR_COLOR
 
-        self.categories_list.add_widget(MDDivider())
+    def categories_panel_init(self):
+        self.categories_panel = MDBoxLayout(
+            orientation="vertical",
+            size_hint=(0.25, 1.0),
+            padding=[10, 10, 5, 5],
+            # spacing=5,
+            radius=[10, 10, 10, 10],
+            # pos_hint={"center_x": 0.5, "center_y": 0.5},
+            theme_bg_color="Custom",
+            md_bg_color=TOP_APP_BAR_COLOR
+        )
+
+        categories_label = MDLabel(
+            text="Категории",
+            halign="left",
+            theme_text_color="Custom",
+            text_color="black",
+            adaptive_height=True,
+            font_style="Title",
+            role="medium",
+            bold=True
+        )
+
+        self.categories_list = MDList(spacing=0)
+
+        scroll_view_categories_list = MDScrollView()
+        scroll_view_categories_list.add_widget(self.categories_list)
+
+        self.categories_panel.add_widget(categories_label)
+        # self.categories_panel.add_widget(
+        #     MDDivider(
+        #         theme_divider_color="Custom",
+        #         color=SECONDARY_COLOR
+        #     )
+        # )
+        self.categories_panel.add_widget(scroll_view_categories_list)
 
         for category in CATEGORIES:
             item = MDListItem(
@@ -122,6 +160,9 @@ class CafeMenuScreen(MDScreen):
                     role="small",
                     bold=False
                 ),
+                id=category.name,
+                divider=True,
+                divider_color="black",
                 theme_bg_color="Custom",
                 md_bg_color="pink" if category == self.selected_category else TOP_APP_BAR_COLOR,
                 on_release=lambda x, cat=category: self.select_category(cat),
@@ -130,39 +171,12 @@ class CafeMenuScreen(MDScreen):
             )
 
             self.categories_list.add_widget(item)
-            self.categories_list.add_widget(MDDivider())
-
-    def categories_panel_init(self):
-        self.categories_panel = MDBoxLayout(
-            orientation="vertical",
-            size_hint=(0.25, 1),
-            padding=5,
-            spacing=5,
-            radius=[10, 10, 10, 10],
-            theme_bg_color="Custom",
-            md_bg_color=TOP_APP_BAR_COLOR
-        )
-
-        categories_label = MDLabel(
-            text="Категории",
-            halign="center",
-            theme_text_color="Custom",
-            text_color="black",
-            adaptive_height=True,
-            font_style="Title",
-            role="medium",
-            bold=True
-        )
-
-        self.categories_list = MDList()
-
-        scroll_view_categories_list = MDScrollView()
-        scroll_view_categories_list.add_widget(self.categories_list)
-
-        self.categories_panel.add_widget(categories_label)
-        self.categories_panel.add_widget(scroll_view_categories_list)
-
-        self.categories_panel_list_update()
+            # self.categories_list.add_widget(
+            #     MDDivider(
+            #         theme_bg_color="Custom",
+            #         color="black"
+            #     )
+            # )
 
     def products_panel_list_update(self):
         app = MDApp.get_running_app()
@@ -170,7 +184,8 @@ class CafeMenuScreen(MDScreen):
         self.products_list.clear_widgets()
         self.products_list.parent.scroll_y = 1.0
 
-        products = sorted([p for p in PRODUCTS if p.category_id == self.selected_category.category_id], key=lambda x: x.name)
+        products = sorted([p for p in PRODUCTS if p.category_id == self.selected_category.category_id],
+                          key=lambda x: x.name)
 
         for product in products:
             card = MDCard(
@@ -181,7 +196,7 @@ class CafeMenuScreen(MDScreen):
                 spacing=dp(10),
                 radius=[dp(10), dp(10), dp(10), dp(10)],
                 theme_bg_color="Custom",
-                md_bg_color=THIRD_COLOR,
+                md_bg_color=TOP_APP_BAR_COLOR,
                 style="elevated",
                 theme_elevation_level="Custom",
                 elevation_level=1,
@@ -203,10 +218,10 @@ class CafeMenuScreen(MDScreen):
             product_name_label = MDLabel(
                 text=f"{product.name} {product.selected_size} {product.size_unit}",
                 halign="left",
-                padding=10,
+                font_style="Title",
+                role="small",
                 theme_text_color="Custom",
                 text_color="black",
-                bold=True,
                 size_hint_x=0.7,
             )
 
@@ -230,7 +245,7 @@ class CafeMenuScreen(MDScreen):
                 orientation="horizontal",
                 size_hint_y=None,
                 height=dp(40),
-                spacing=dp(10)
+                spacing=dp(40)
             )
 
             # Контейнер для кнопок размеров
@@ -238,36 +253,55 @@ class CafeMenuScreen(MDScreen):
                 orientation="horizontal",
                 spacing=5,
                 padding=10,
-                size_hint_x=0.6
+                size_hint_x=0.6,
             )
 
             len_sizes = len(product.sizes)
             if len_sizes > 1:
+                size_button = MDSegmentedButton(
+                    type="small",
+                )
+
                 for i in range(len_sizes):
-                    size_button = MDButton(
-                        MDButtonText(
-                            text=f"{product.sizes_label[i]}",
-                            theme_text_color="Custom",
-                            text_color="black",
-                            font_size=dp(10)
-                        ),
-                        size_hint=(None, None),
-                        size=(dp(40), dp(35)),
-                        theme_bg_color="Custom",
-                        md_bg_color="pink" if i == 0 else "white",
+                    size_button.add_widget(
+                        MDSegmentedButtonItem(
+                            MDSegmentButtonLabel(
+                                text=f"{product.sizes_label[i]}",
+                                # theme_text_color="Custom",
+                                # text_color="black",
+                                theme_font_size="Custom",
+                                font_size="15sp",
+                            ),
+                            active=i == 0,
+                            selected_color="pink",
+                            on_release=lambda x, p=product, n=i: self.select_size(x, p, n)
+                        )
                     )
 
-                    size_button.bind(on_release=lambda x, p=product, n=i: self.select_size(x, p, n))
+                    # size_button = MDSegmentedButton(
+                    #     MDButtonText(
+                    #         text=f"{product.sizes_label[i]}",
+                    #         theme_text_color="Custom",
+                    #         text_color="black",
+                    #         theme_font_size="Custom",
+                    #         font_size="15sp",
+                    #     ),
+                    #     size_hint=(None, None),
+                    #     size=(dp(30), dp(30)),
+                    #     theme_bg_color="Custom",
+                    #     md_bg_color="pink" if i == 0 else "white",
+                    # )
+                    #
+                    # size_button.bind(on_release=lambda x, p=product, n=i: self.select_size(x, p, n))
 
-                    size_container.add_widget(size_button)
+                size_container.add_widget(size_button)
 
             bottom_row.add_widget(size_container)
 
             # Кнопки добавления/удаления
             buttons_container = MDBoxLayout(
                 orientation="horizontal",
-                spacing=dp(5),
-                padding=2,
+                padding=[0, 0, 0, 5],
                 size_hint_x=0.3
             )
 
@@ -277,13 +311,14 @@ class CafeMenuScreen(MDScreen):
                 theme_text_color="Custom",
                 text_color="black",
                 theme_bg_color="Custom",
-                md_bg_color=SECONDARY_COLOR,
-                # size_hint=(None, None),
-                # size=(dp(30), dp(30))
+                md_bg_color=TOP_APP_BAR_COLOR,
+                theme_font_size="Custom",
+                font_size="16sp",
             )
             pop_button.bind(on_release=lambda x, p=product: self.pop_from_cart(p))
 
-            product_amount = sum(item.quantity for item in app.cart.cart_items if item.product.product_id == product.product_id)
+            product_amount = sum(
+                item.quantity for item in app.cart.cart_items if item.product.product_id == product.product_id)
 
             # Поле для отображения количества в корзине
             quantity_label = MDLabel(
@@ -291,8 +326,8 @@ class CafeMenuScreen(MDScreen):
                 theme_text_color="Custom",
                 text_color="black",
                 halign="center",
-                # valign="center",
-                # size_hint_x=0.2,
+                valign="center",
+                size_hint_y=1.0,
                 bold=True
             )
 
@@ -304,9 +339,11 @@ class CafeMenuScreen(MDScreen):
                 theme_text_color="Custom",
                 text_color="black",
                 theme_bg_color="Custom",
-                md_bg_color=SECONDARY_COLOR,
-                # size_hint=(None, None),
-                # size=(dp(30), dp(30))
+                md_bg_color=TOP_APP_BAR_COLOR,
+                theme_font_size="Custom",
+                font_size="16sp",
+                size_hint=(None, None),
+                size=("50dp", "50dp"),
             )
             add_button.bind(on_release=lambda x, p=product: self.add_to_cart(p))
 
@@ -323,17 +360,17 @@ class CafeMenuScreen(MDScreen):
         self.products_panel = MDBoxLayout(
             orientation="vertical",
             size_hint=(0.75, 1.0),
-            padding=5,
+            padding=[10, 10, 5, 5],
             spacing=10,
             radius=[10, 10, 10, 10],
-            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            # pos_hint={"center_x": 0.5, "center_y": 0.5},
             theme_bg_color="Custom",
             md_bg_color=TOP_APP_BAR_COLOR
         )
 
         self.products_label = MDLabel(
             text="Кофе",
-            halign="center",
+            halign="left",
             theme_text_color="Custom",
             text_color="black",
             adaptive_height=True,
@@ -343,10 +380,10 @@ class CafeMenuScreen(MDScreen):
         )
 
         self.products_list = MDList(
-            padding=15,
-            spacing=15,
+            spacing=10,
+            padding=5,
             size_hint=(0.95, 1),
-            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            # pos_hint={"center_x": 0.5, "center_y": 0.5},
             # theme_bg_color="Custom",
             # md_bg_color=FOURTH_COLOR
         )
@@ -354,15 +391,18 @@ class CafeMenuScreen(MDScreen):
         self.cart_button = MDButton(
             MDButtonIcon(
                 icon="cart",
-                pos_hint={"center_x": 0.42, "center_y": 0.5},
+                halign="left",
+                # pos_hint={"center_x": 0.42, "center_y": 0.5},
                 theme_text_color="Custom",
                 text_color="black"),
             MDButtonText(
                 id="text",
                 text="0 BYN",
+                halign="right",
                 theme_text_color="Custom",
                 text_color="black",
-                pos_hint={"center_x": 0.58, "center_y": 0.5}
+                adaptive_size=True,
+                # pos_hint={"center_x": 0.58, "center_y": 0.5}
             ),
             style="filled",
             theme_bg_color="Custom",
@@ -370,7 +410,9 @@ class CafeMenuScreen(MDScreen):
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             height="50dp",
             theme_width="Custom",
-            size_hint=(0.5, 0.8),
+            # size_hint=(0.5, 0.8),
+            size_hint_x=None,
+            width=120,
             on_release=self.show_cart
         )
 
@@ -378,6 +420,12 @@ class CafeMenuScreen(MDScreen):
         products_scroll.add_widget(self.products_list)
 
         self.products_panel.add_widget(self.products_label)
+        # self.products_panel.add_widget(
+        #     MDDivider(
+        #         theme_divider_color="Custom",
+        #         color=SECONDARY_COLOR
+        #     )
+        # )
         self.products_panel.add_widget(products_scroll)
         self.products_panel.add_widget(self.cart_button)
 
@@ -415,17 +463,18 @@ class CafeMenuScreen(MDScreen):
         self.products_panel_list_update()
 
     def select_size(self, button, product, size_num):
-        for btn in button.parent.children:
-            btn.md_bg_color = "white"
-
-        button.md_bg_color = "pink"
+        # for btn in button.parent.children:
+        #     btn.md_bg_color = "white"
+        #
+        # button.md_bg_color = "pink"
 
         # Сохраняем выбранный размер для продукта
         product.selected_size = product.sizes[size_num]
         product.selected_price = product.prices[size_num]
 
-        button.parent.parent.parent.children[1].children[0].children[1].text = f"{product.name} {product.selected_size} {product.size_unit}"
-        button.parent.parent.parent.children[1].children[0].children[0].text = f"{product.selected_price} BYN"
+        button.parent.parent.parent.parent.parent.children[1].children[0].children[
+            1].text = f"{product.name} {product.selected_size} {product.size_unit}"
+        button.parent.parent.parent.parent.parent.children[1].children[0].children[0].text = f"{product.selected_price} BYN"
 
     # Метод добавления в корзину
     def add_to_cart(self, product, size=None):
@@ -539,20 +588,28 @@ class CafeMenuScreen(MDScreen):
                 size_hint_x=0.3
             )
 
+            # Кнопки добавления/удаления
+            buttons_container = MDBoxLayout(
+                orientation="horizontal",
+                padding=[0, 0, 0, 5],
+                size_hint_x=0.3
+            )
+
             # Кнопка уменьшения количества
             pop_button = MDIconButton(
                 icon="minus",
                 theme_text_color="Custom",
                 text_color="black",
                 theme_bg_color="Custom",
-                md_bg_color=SECONDARY_COLOR,
-                # size_hint=(None, None),
-                # size=(dp(30), dp(30))
+                md_bg_color=TOP_APP_BAR_COLOR,
+                theme_font_size="Custom",
+                font_size="16sp",
             )
             pop_button.bind(on_release=lambda x, p=cart_item.product, s=cart_item.size: self.pop_from_cart(p, s))
 
-            item_amount = sum(item.quantity for item in app.cart.cart_items if item.product.product_id == cart_item.product.product_id
-                              and item.size == cart_item.size)
+            item_amount = sum(
+                item.quantity for item in app.cart.cart_items if item.product.product_id == cart_item.product.product_id
+                and item.size == cart_item.size)
 
             # Поле для отображения количества в корзине
             quantity_label = MDLabel(
@@ -560,9 +617,8 @@ class CafeMenuScreen(MDScreen):
                 theme_text_color="Custom",
                 text_color="black",
                 halign="center",
-                valign="bottom",
-                # valign="center",
-                # size_hint_x=0.2,
+                valign="center",
+                size_hint_y=1.0,
                 bold=True
             )
 
@@ -572,9 +628,9 @@ class CafeMenuScreen(MDScreen):
                 theme_text_color="Custom",
                 text_color="black",
                 theme_bg_color="Custom",
-                md_bg_color=SECONDARY_COLOR,
-                # size_hint=(None, None),
-                # size=(dp(30), dp(30))
+                md_bg_color=TOP_APP_BAR_COLOR,
+                theme_font_size="Custom",
+                font_size="16sp",
             )
             add_button.bind(on_release=lambda x, p=cart_item.product, s=cart_item.size: self.add_to_cart(p, s))
 
@@ -1147,7 +1203,7 @@ class CafeMenuScreen(MDScreen):
                 ),
             ),
             size_hint=(0.9, 0.8),
-            radius = [5, 5, 5, 5],
+            radius=[5, 5, 5, 5],
         )
         dialog.open()
 

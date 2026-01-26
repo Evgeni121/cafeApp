@@ -1,5 +1,7 @@
-from kivymd.uix.button import MDButton, MDButtonText
-from kivymd.uix.label import MDLabel
+from kivy.uix.image import Image
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDButton, MDButtonText, MDButtonIcon
+from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
 
@@ -12,27 +14,37 @@ class LoginMenuScreen(MDScreen):
         self.name = "login_menu"
         self.md_bg_color = "white"
 
-        main_layout = MDRelativeLayout()
+        logo = Image(
+            source='logo.png',
+            size_hint=(None, None),
+            size=("150dp", "150dp"),
+            pos_hint={"center_x": 0.5},
+        )
 
         title = MDLabel(
-            text="Pig Bank",
+            text="PIG BANK",
             halign="center",
+            valign="center",
             font_style="Display",
             theme_text_color="Custom",
             text_color="black",
-            adaptive_height=True,
-            pos_hint={"center_x": 0.5, "center_y": 0.6},
+            # adaptive_height=True,
+            size_hint_y=None,
+            height=40,
+            # theme_bg_color="Custom",
+            # md_bg_color="pink",
+            # pos_hint={"center_x": 0.5, "center_y": 0.6},
         )
 
         subtitle1 = MDLabel(
-            text="Кофе",
+            text="Кофе, чай, свинки",
             halign="center",
-            font_style="Headline",
-            role="small",
+            # font_style="Headline",
+            # role="small",
             theme_text_color="Custom",
             text_color="black",
             adaptive_height=True,
-            pos_hint={"center_x": 0.5, "center_y": 0.55},
+            # pos_hint={"center_x": 0.5, "center_y": 0.55},
         )
 
         subtitle2 = MDLabel(
@@ -42,22 +54,39 @@ class LoginMenuScreen(MDScreen):
             text_color="black",
             size_hint_y=None,
             adaptive_height=True,
-            pos_hint={"center_x": 0.5, "center_y": 0.45},
+            # pos_hint={"center_x": 0.5, "center_y": 0.45},
         )
 
         open_button = MDButton(
+            MDButtonIcon(icon="login", theme_text_color="Custom", text_color="black"),
             MDButtonText(text="Открыть", theme_text_color="Custom", text_color="black"),
-            style="filled",
+            style="elevated",
             theme_bg_color="Custom",
             md_bg_color="pink",
-            pos_hint={"center_x": 0.5, "center_y": 0.38},
+            pos_hint={"center_x": 0.5},
         )
         open_button.bind(on_release=self.go_to_barista_menu)
 
-        main_layout.add_widget(title)
-        main_layout.add_widget(subtitle1)
-        main_layout.add_widget(subtitle2)
-        main_layout.add_widget(open_button)
+        layout = MDBoxLayout(
+            orientation="vertical",
+            padding=5,
+            spacing=5,
+            pos_hint={"center_x": 0.5, "center_y": 0.8},
+        )
+
+        layout.add_widget(logo)
+        layout.add_widget(MDBoxLayout(size_hint_y=None, height=40))
+
+        layout.add_widget(title)
+
+        layout.add_widget(subtitle1)
+        layout.add_widget(MDBoxLayout(size_hint_y=None, height=40))
+
+        layout.add_widget(subtitle2)
+        layout.add_widget(open_button)
+
+        main_layout = MDRelativeLayout()
+        main_layout.add_widget(layout)
 
         self.add_widget(main_layout)
 

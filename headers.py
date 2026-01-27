@@ -1,10 +1,16 @@
 from datetime import datetime
+from typing import Self, Optional
+
+from database import DataBase
 
 PRIMARY_COLOR = "pink"
 SECONDARY_COLOR = "lavenderblush"
 THIRD_COLOR = "snow"
 FOURTH_COLOR = "snow"
 TOP_APP_BAR_COLOR = "white"
+
+
+database = DataBase()
 
 
 class Category:
@@ -136,6 +142,16 @@ class Barista:
     def name(self, name):
         self._name = name
 
+    @classmethod
+    def get_all(cls) -> [Self]:
+        baristas_db = database.get_baristas()
+
+        baristas = []
+        for barista in baristas_db:
+            baristas.append(Barista(barista[4], barista[3]))
+
+        return baristas
+
 
 BARISTAS = [
     Barista(1, "Дашка"),
@@ -221,41 +237,59 @@ class Order:
 
 
 class Shift:
-    """Смена"""
+    def __init__(self):
+        self.shift_id = None
 
-    def __init__(self, barista: Barista):
-        self.barista = barista
-
-        self.start_time = datetime.now()
+        self.start_time = None
         self.end_time = None
 
-        self.status = True
+        self.status = False
+
+        self.barista: Optional[Barista] = None
 
         self.orders: [Order] = []
         self.total_revenue = 0
 
-    def close(self):
-        self.end_time = datetime.now()
+        self.get_today_shift()
+
+    def reset(self):
+        self.shift_id = None
+
+        self.start_time = None
+        self.end_time = None
 
         self.status = False
 
-        self.total_revenue = sum(order.total_amount for order in self.orders)
+        self.barista: Optional[Barista] = None
+
+        self.orders: [Order] = []
+        self.total_revenue = 0
+
+    def open(self, barista: Barista):
+        self.barista = barista
+
+        res = database.open_shift(cafe_user_id=self.barista.barista_id)
+        if res:
+            self.shift_id = res.id
+            self.start_time = res.datetime
+            self.status = True
+
+    def close(self):
+        res = database.close_today_shift(shift_id=self.shift_id)
+        if res:
+            self.reset()
 
     def add_order(self, order):
         self.orders.append(order)
 
-    def to_dict(self):
-        duration = ""
-        if self.end_time:
-            duration_minutes = int((self.end_time - self.start_time).total_seconds() / 60)
-            duration = f"{duration_minutes} мин"
+    def get_today_shift(self):
+        shift_db = database.get_today_shift()
 
-        return {
-            'barista': self.barista.name,
-            'start_time': self.start_time.strftime("%H:%M"),
-            'end_time': self.end_time.strftime("%H:%M") if self.end_time else "",
-            'duration': duration,
-            'orders_count': len(self.orders),
-            'revenue': self.total_revenue,
-            'status': self.status
-        }
+        if shift_db:
+            self.status = True
+
+            self.shift_id = shift_db[0]
+            self.start_time = shift_db[1]
+            self.end_time = shift_db[2]
+
+            self.barista = Barista(shift_db[4], shift_db[3])

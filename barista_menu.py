@@ -12,7 +12,7 @@ from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
-from headers import Shift, Barista, BARISTAS, SECONDARY_COLOR, THIRD_COLOR
+from headers import Shift, Barista, SECONDARY_COLOR, THIRD_COLOR
 
 
 class BaristaMenuScreen(MDScreen):
@@ -41,7 +41,7 @@ class BaristaMenuScreen(MDScreen):
             pos_hint={"center_x": 0.5, "center_y": 0.7},
         )
 
-        for i, barista in enumerate(BARISTAS):
+        for i, barista in enumerate(Barista.get_all()):
             item = MDCard(
                 size_hint_y=None,
                 height="50dp",
@@ -129,16 +129,11 @@ class BaristaMenuScreen(MDScreen):
         dialog.dismiss()
 
         app = MDApp.get_running_app()
-        app.barista = barista
-        shift = Shift(app.barista)
-
-        app.shift = shift
-        app.shifts.append(shift)
+        app.shift.open(barista)
 
         self.manager.current = "main_menu"
-
         cafe_screen = self.manager.get_screen("main_menu")
-        cafe_screen.update_for_barista(app.barista)
+        cafe_screen.update_for_barista(app.shift.barista)
 
         MDSnackbar(
             MDSnackbarText(

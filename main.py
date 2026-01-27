@@ -10,17 +10,13 @@ from login_menu import LoginMenuScreen
 from main_menu import CafeMenuScreen
 
 
-# ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 class PigBankApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.cart: Optional[Cart] = Cart()
 
-        self.barista: Optional[Barista] = None
-        self.shift: Optional[Shift] = None
-
-        self.shifts: [Shift] = []
+        self.shift: Shift = Shift()
 
     def build(self):
         Window.size = (600, 750)
@@ -33,7 +29,11 @@ class PigBankApp(MDApp):
         screen_manager.add_widget(BaristaMenuScreen())
         screen_manager.add_widget(CafeMenuScreen())
 
-        screen_manager.current = "login_menu"
+        if self.shift.status:
+            screen_manager.current = "main_menu"
+        else:
+            screen_manager.current = "login_menu"
+
         return screen_manager
 
 

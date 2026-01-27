@@ -78,6 +78,10 @@ class CafeMenuScreen(MDScreen):
         self.toolbar_menu.open()
 
     def top_app_bar_init(self):
+        app = MDApp.get_running_app()
+        if app.shift:
+            self.barista = app.shift.barista
+
         self.top_app_bar = MDTopAppBar(
             MDTopAppBarLeadingButtonContainer(
                 MDActionTopAppBarButton(
@@ -747,7 +751,7 @@ class CafeMenuScreen(MDScreen):
 
         order_id = len(app.shift.orders) + 1
 
-        order = Order(order_id, app.barista)
+        order = Order(order_id, app.shift.barista)
         for cart_item in app.cart.cart_items:
             order.add_item(cart_item)
 

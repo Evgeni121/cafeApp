@@ -5,6 +5,8 @@ from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
 
+from headers import Shift
+
 
 # ========== ЭКРАН ВХОДА ==========
 class LoginMenuScreen(MDScreen):

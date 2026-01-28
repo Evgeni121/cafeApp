@@ -214,33 +214,38 @@ class Cart:
 class Order:
     """Заказ"""
 
-    def __init__(self, shift):
-        self.order_id = None
+    def __init__(self, order_id=None, shift_id=None, total_price=0, created_at=None):
+        self.order_id = order_id
 
-        self.shift = shift
+        self.shift_id = shift_id
 
-        self.items = []
+        self.items: [CartItem] = []
 
-        self.created_at = datetime.now().strftime("%H:%M:%S")
-        self.total_amount = 0
+        time = created_at or datetime.now()
+        self.created_at = time.strftime("%H:%M:%S")
 
-    def add_item(self, cart_item):
+        self.total_price = total_price
+
+    def add_item(self, cart_item: CartItem):
         self.items.append(cart_item)
-        self.total_amount += cart_item.total
+        self.total_price += cart_item.total
 
 
 class Shift:
-    def __init__(self, shift_id=None, start_time=None, end_time=None, barista=None):
+    def __init__(self, shift_id=None, start_time=None, end_time=None, barista=None, order_amount=0, revenue=0):
         self.shift_id = shift_id
 
         self.start_time = start_time
         self.end_time = end_time
 
-        self.status = False
-
         self.barista: Optional[Barista] = barista
 
         self.orders: [Order] = []
+
+        self.order_amount = order_amount
+        self.revenue = revenue
+
+        self.status = False
 
     def reset(self):
         self.shift_id = None
@@ -248,15 +253,21 @@ class Shift:
         self.start_time = None
         self.end_time = None
 
-        self.status = False
-
         self.barista: Optional[Barista] = None
 
         self.orders: [Order] = []
 
+        self.order_amount = 0
+        self.revenue = 0
+
+        self.status = False
+
     @property
     def total_revenue(self):
-        return sum(order.total_amount for order in self.orders)
+        if self.orders:
+            return sum(order.total_amount for order in self.orders)
+        else:
+            return self.revenue
 
     @property
     def total_hours(self) -> int:
@@ -279,32 +290,46 @@ class Shift:
         if res:
             self.shift_id = res.id
             self.start_time = res.datetime
+
             self.status = True
 
     def close(self):
-        res = database.close_today_shift(shift_id=self.shift_id)
+        res = database.close_today_shift(shift_id=self.shift_id, order_amount=self.order_amount, revenue=self.revenue)
         if res:
             self.reset()
 
-    def add_order(self, order):
-        order_db = database.create_order(self, order.items)
-        if order_db:
-            order.id = order_db.id
+    def add_order(self, order: Order):
+        order_id_db = database.create_order(self, order.items)
+        if order_id_db:
+            order.order_id = order_id_db
             self.orders.append(order)
+
+            self.order_amount += 1
+
+            self.revenue += order.total_price
 
     def get_today_shift(self):
         shift_db = database.get_today_open_shift()
 
         if shift_db:
-            self.status = True
-
             self.shift_id = shift_db[0]
             self.start_time = shift_db[1]
             self.end_time = shift_db[2]
 
             self.barista = Barista(shift_db[4], shift_db[3])
 
+            self.status = True
+
+            orders_db = database.get_orders(self.shift_id)
+            if orders_db:
+                for order_db in orders_db:
+                    order = Order(order_db.order_id, self.shift_id, order_db[1], created_at=order_db[2])
+                    self.orders.append(order)
+                    self.order_amount += 1
+                    self.revenue += order.total_price
+
     def get_all(self) -> [Self]:
         shifts_db = database.get_all_shifts(barista_id=self.barista.barista_id)
-        return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=self.barista) for shift in
+        return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=self.barista,
+                      order_amount=shift[3], revenue=shift[4]) for shift in
                 shifts_db]

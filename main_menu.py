@@ -10,6 +10,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialogButtonContainer, MDDialogHeadlineText, MDDialog, MDDialogSupportingText, \
     MDDialogContentContainer
 from kivymd.uix.divider import MDDivider
+from kivymd.uix.fitimage import FitImage
 from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDListItemHeadlineText, MDListItem, MDList
 from kivymd.uix.menu import MDDropdownMenu
@@ -219,6 +220,16 @@ class CafeMenuScreen(MDScreen):
             card_layout = MDRelativeLayout()
             card.add_widget(card_layout)
 
+            # # Добавь картинку в начало card_layout
+            # product_image = FitImage(
+            #     source=f"images/drinks/{20}.jpg",
+            #     size_hint=(0.5, None),
+            #     height=120,
+            #     radius=[10, 10, 10, 10],
+            #     pos_hint={"center_x": 0.3, "center_y": 0.1}
+            # )
+            # card_layout.add_widget(product_image)
+
             # Верхняя строка: название и цена
             top_row = MDBoxLayout(
                 orientation="horizontal",
@@ -232,7 +243,7 @@ class CafeMenuScreen(MDScreen):
                 text=f"{product.name} {product.selected_size} {product.size_unit}",
                 halign="left",
                 font_style="Title",
-                role="small",
+                role="medium",
                 theme_text_color="Custom",
                 text_color="black",
                 size_hint_x=0.7,
@@ -782,7 +793,7 @@ class CafeMenuScreen(MDScreen):
             MDDialogSupportingText(text=f"Номер заказа: №{order.order_id}\n"
                                         f"Время: {order.created_at}\n\n"
                                         f"{items_text}\n\n"
-                                        f"Итого: {order.total_amount} BYN",
+                                        f"Итого: {order.total_price} BYN",
                                    theme_text_color="Custom", text_color="black"),
             MDDialogButtonContainer(
                 MDWidget(),
@@ -859,7 +870,7 @@ class CafeMenuScreen(MDScreen):
                 size_hint_x=0.4
             )
 
-            total += order.total_amount
+            total += order.total_price
 
             order_details_header = MDBoxLayout(
                 orientation="horizontal",
@@ -867,7 +878,7 @@ class CafeMenuScreen(MDScreen):
             )
 
             order_details = MDLabel(
-                text=f"{len(order.items)} товаров на сумму {order.total_amount} BYN",
+                text=f"{len(order.items)} товаров на сумму {order.total_price} BYN",
                 theme_text_color="Custom",
                 text_color="black",
                 size_hint_y=None,
@@ -1049,7 +1060,7 @@ class CafeMenuScreen(MDScreen):
         )
 
         total_value = MDLabel(
-            text=f"{order.total_amount} BYN",
+            text=f"{order.total_price} BYN",
             theme_text_color="Custom",
             text_color="black",
             bold=True,
@@ -1274,7 +1285,7 @@ class CafeMenuScreen(MDScreen):
         app = MDApp.get_running_app()
 
         total_orders = len(app.shift.orders)
-        total_revenue = sum(order.total_amount for order in app.shift.orders)
+        total_revenue = sum(order.total_price for order in app.shift.orders)
 
         dialog = MDDialog(
             MDDialogHeadlineText(text="Закрыть смену", theme_text_color="Custom", text_color="black"),

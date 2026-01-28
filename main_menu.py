@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from kivy.metrics import dp
 from kivymd.app import MDApp
 from kivymd.uix.appbar import MDTopAppBarTrailingButtonContainer, MDActionTopAppBarButton, MDTopAppBarTitle, \
@@ -18,7 +20,7 @@ from kivymd.uix.segmentedbutton import MDSegmentedButton, MDSegmentedButtonItem,
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
-from headers import Order, Barista, SECONDARY_COLOR, TOP_APP_BAR_COLOR, FOURTH_COLOR, CATEGORIES, PRODUCTS, Category, \
+from headers import Order, Barista, SECONDARY_COLOR, TOP_APP_BAR_COLOR, FOURTH_COLOR, Category, \
     THIRD_COLOR
 
 
@@ -41,7 +43,8 @@ class CafeMenuScreen(MDScreen):
         self.cart_button = None
         self.cart_list = None
 
-        self.selected_category = CATEGORIES[0]
+        app = MDApp.get_running_app()
+        self.selected_category = app.menu.categories[0]
         self.barista = None
 
         self.scroll_view = None
@@ -71,7 +74,11 @@ class CafeMenuScreen(MDScreen):
             },
         ]
 
-        self.toolbar_menu = MDDropdownMenu(items=menu_items)
+        self.toolbar_menu = MDDropdownMenu(
+            items=menu_items,
+            # theme_bg_color="Custom",
+            # md_bg_color=TOP_APP_BAR_COLOR
+        )
 
     def toolbar_menu_open(self, button):
         self.toolbar_menu.caller = button
@@ -153,7 +160,9 @@ class CafeMenuScreen(MDScreen):
         # )
         self.categories_panel.add_widget(scroll_view_categories_list)
 
-        for category in CATEGORIES:
+        app = MDApp.get_running_app()
+
+        for category in app.menu.categories:
             item = MDListItem(
                 # MDListItemLeadingIcon(icon=category["icon"]),
                 MDListItemHeadlineText(
@@ -188,7 +197,7 @@ class CafeMenuScreen(MDScreen):
         self.products_list.clear_widgets()
         self.products_list.parent.scroll_y = 1.0
 
-        products = sorted([p for p in PRODUCTS if p.category_id == self.selected_category.category_id],
+        products = sorted([p for p in app.menu.drinks if p.category_id == self.selected_category.category_id],
                           key=lambda x: x.name)
 
         for product in products:
@@ -322,7 +331,7 @@ class CafeMenuScreen(MDScreen):
             pop_button.bind(on_release=lambda x, p=product: self.pop_from_cart(p))
 
             product_amount = sum(
-                item.quantity for item in app.cart.cart_items if item.product.product_id == product.product_id)
+                item.quantity for item in app.cart.cart_items if item.product.drink_id == product.drink_id)
 
             # Поле для отображения количества в корзине
             quantity_label = MDLabel(
@@ -335,7 +344,7 @@ class CafeMenuScreen(MDScreen):
                 bold=True
             )
 
-            self.product_card_quantity_labels[product.product_id] = quantity_label
+            self.product_card_quantity_labels[product.drink_id] = quantity_label
 
             # Кнопка увеличения количества
             add_button = MDIconButton(
@@ -496,7 +505,7 @@ class CafeMenuScreen(MDScreen):
         app.cart.add(product, size or product.selected_size)
 
         self.update_cart_counter()
-        self.update_card_counter(product.product_id)
+        self.update_card_counter(product.drink_id)
         self.cart_items_update()
 
     # Метод удаления из корзины
@@ -506,7 +515,7 @@ class CafeMenuScreen(MDScreen):
         app.cart.pop(product, size or product.selected_size)
 
         self.update_cart_counter()
-        self.update_card_counter(product.product_id)
+        self.update_card_counter(product.drink_id)
         self.cart_items_update()
 
     # Вспомогательный метод для форматирования отображения размера
@@ -521,11 +530,11 @@ class CafeMenuScreen(MDScreen):
             else:
                 return f"{size / 1000:.1f}л"
 
-    def update_card_counter(self, product_id):
+    def update_card_counter(self, drink_id):
         app = MDApp.get_running_app()
 
-        product_amount = sum(item.quantity for item in app.cart.cart_items if item.product.product_id == product_id)
-        card_quantity_label = self.product_card_quantity_labels.get(product_id)
+        product_amount = sum(item.quantity for item in app.cart.cart_items if item.product.drink_id == drink_id)
+        card_quantity_label = self.product_card_quantity_labels.get(drink_id)
         if card_quantity_label and isinstance(card_quantity_label, MDLabel):
             card_quantity_label.text = str(product_amount)
 
@@ -618,7 +627,7 @@ class CafeMenuScreen(MDScreen):
             pop_button.bind(on_release=lambda x, p=cart_item.product, s=cart_item.size: self.pop_from_cart(p, s))
 
             item_amount = sum(
-                item.quantity for item in app.cart.cart_items if item.product.product_id == cart_item.product.product_id
+                item.quantity for item in app.cart.cart_items if item.product.drink_id == cart_item.product.drink_id
                 and item.size == cart_item.size)
 
             # Поле для отображения количества в корзине
@@ -749,13 +758,12 @@ class CafeMenuScreen(MDScreen):
             dialog.dismiss()
             return
 
-        order_id = len(app.shift.orders) + 1
-
-        order = Order(order_id, app.shift.barista)
+        order = Order(app.shift)
         for cart_item in app.cart.cart_items:
             order.add_item(cart_item)
 
         app.shift.add_order(order)
+
         app.cart.clear()
 
         dialog.dismiss()
@@ -1095,9 +1103,9 @@ class CafeMenuScreen(MDScreen):
         self.toolbar_menu.dismiss()
 
         app = MDApp.get_running_app()
-        shifts = [shift for shift in app.shifts if shift.barista.barista_id == app.barista.barista_id]
+        shifts = app.shift.get_all()
 
-        if not hasattr(app, 'shifts') or not shifts:
+        if not shifts:
             MDSnackbar(
                 MDSnackbarText(text="История смен пуста", theme_text_color="Custom", text_color="black"),
                 y=dp(24),
@@ -1116,9 +1124,7 @@ class CafeMenuScreen(MDScreen):
         )
         history_content.bind(minimum_height=history_content.setter('height'))
 
-        total = 0
-
-        for shift in reversed(shifts[-10:]):
+        for shift in shifts:
             order_card = MDBoxLayout(
                 orientation="vertical",
                 spacing=dp(10),
@@ -1148,9 +1154,6 @@ class CafeMenuScreen(MDScreen):
                 font_size="12sp",
                 size_hint_x=0.4
             )
-
-            if shift.end_time:
-                total += shift.end_time.timestamp() - shift.start_time.timestamp()
 
             order_details_header = MDBoxLayout(
                 orientation="horizontal",
@@ -1210,8 +1213,22 @@ class CafeMenuScreen(MDScreen):
             size_hint_x=0.5
         )
 
+        total_amount = len(shifts)
+        total_hours = sum(shift.total_hours for shift in shifts)
+
+        text = "смен" if total_amount > 4 else "смены" if total_amount > 1 else "смена"
         cart_total_value_label = MDLabel(
-            text=f"{total // 3600} часов",
+            text=f"{total_amount} {text}",
+            theme_text_color="Custom",
+            text_color="black",
+            font_size=dp(20),
+            bold=True,
+            halign="right",
+            size_hint_x=0.5
+        )
+
+        cart_total_hours_label = MDLabel(
+            text=f"{total_hours} часов",
             theme_text_color="Custom",
             text_color="black",
             font_size=dp(20),
@@ -1222,6 +1239,7 @@ class CafeMenuScreen(MDScreen):
 
         total_layout.add_widget(total_label)
         total_layout.add_widget(cart_total_value_label)
+        total_layout.add_widget(cart_total_hours_label)
 
         dialog = MDDialog(
             MDDialogHeadlineText(text="История смен", theme_text_color="Custom", text_color="black"),

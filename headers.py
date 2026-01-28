@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Self, Optional
 
 from database import DataBase
@@ -8,7 +8,6 @@ SECONDARY_COLOR = "lavenderblush"
 THIRD_COLOR = "snow"
 FOURTH_COLOR = "snow"
 TOP_APP_BAR_COLOR = "white"
-
 
 database = DataBase()
 
@@ -27,22 +26,9 @@ class Category:
         return self._name
 
 
-CATEGORIES = [
-    Category(1, "Кофе"),
-    Category(2, "Кофе с молоком"),
-    Category(3, "Не кофе"),
-    Category(4, "Холодные напитки"),
-    Category(5, "Горячие напитки"),
-    Category(6, "Чай"),
-    Category(7, "Авторские напитки"),
-    Category(8, "Десерты"),
-    Category(9, "Добавки"),
-]
-
-
-class Product:
-    def __init__(self, product_id, name, sizes, prices, category_id, calories, sizes_label=None, volume=None):
-        self._product_id = product_id
+class Drink:
+    def __init__(self, drink_id, category_id, name, prices, sizes, calories, sizes_label=None, volume=None):
+        self._drink_id = drink_id
         self._name = name
         self._sizes = sizes
         self._prices = prices
@@ -56,8 +42,8 @@ class Product:
         self._selected_price = self._prices[0]
 
     @property
-    def product_id(self):
-        return self._product_id
+    def drink_id(self):
+        return self._drink_id
 
     @property
     def name(self):
@@ -100,25 +86,39 @@ class Product:
         self._selected_price = selected_price
 
 
-PRODUCTS = [
-    Product(1, "Эспрессо", [30, 50], [5, 6], 1, 5, ["S", "M"], True),
-    Product(2, "Капучино", [250, 350], [6, 7.5], 1, 150, ["M", "L"], True),
-    Product(3, "Латте", [350], [7], 1, 180, ["L"], True),
-    Product(4, "Американо", [250, 350], [5, 6], 1, 10, ["M", "L"], True),
-    Product(5, "Раф", [350], [9], 1, 250, ["L"], True),
+class Menu:
+    def __init__(self):
+        self.categories: [Category] = None
 
-    Product(6, "Черный чай", [350, 450], [5, 7], 6, 2, ["M", "L"], True),
-    Product(7, "Зеленый чай", [350, 450], [5, 7], 6, 1, ["M", "L"], True),
-    Product(8, "Фруктовый чай", [350, 450], [5.5, 7.5], 6, 5, ["M", "L"], True),
+        self.drinks: [Drink] = None
 
-    Product(12, "Чизкейк", [100], [6], 8, 450),
-    Product(13, "Тирамису", [100], [5], 8, 380),
-    Product(14, "Макарун", [100], [4], 8, 120),
+        self.get_categories()
+        self.get_drinks()
 
-    Product(15, "Кола", [330], [2], 4, 150, False, True),
-    Product(16, "Сок", [330], [2], 4, 120, False, True),
-    Product(17, "Вода", [330], [1.5], 4, 0, False, True),
-]
+    def get_categories(self):
+        categories_db = database.get_categories()
+        if categories_db:
+            self.categories = [Category(category[0], category[1]) for category in categories_db]
+
+    def get_drinks(self):
+        drinks_db = database.get_drinks()
+
+        if drinks_db:
+            self.drinks = []
+
+            cat = next((cat for cat in self.categories if cat.name == "Десерты"), None)
+
+            for drink_db in drinks_db:
+                drink = next((drink for drink in self.drinks if drink.name == drink_db[2]), None)
+
+                if drink:
+                    drink._sizes.append(drink_db[4])
+                    drink._prices.append(drink_db[3])
+                    drink._calories.append(drink_db[5])
+                else:
+                    self.drinks.append(
+                        Drink(drink_db[0], drink_db[1], drink_db[2], [drink_db[3]], [drink_db[4]], [drink_db[5]],
+                              sizes_label=["M", "L"], volume=not drink_db[1] == cat.category_id))
 
 
 class Barista:
@@ -182,9 +182,9 @@ class Cart:
     def __init__(self):
         self.cart_items: [CartItem] = []
 
-    def add(self, product: Product, size):
+    def add(self, product: Drink, size):
         cart_item = next((cart_item for cart_item in self.cart_items if
-                          cart_item.product.product_id == product.product_id and
+                          cart_item.product.drink_id == product.drink_id and
                           cart_item.size == size), None)
 
         if cart_item:
@@ -192,9 +192,9 @@ class Cart:
         else:
             self.cart_items.append(CartItem(product, size))
 
-    def pop(self, product: Product, size):
+    def pop(self, product: Drink, size):
         cart_item = next((cart_item for cart_item in self.cart_items if
-                          cart_item.product.product_id == product.product_id and
+                          cart_item.product.drink_id == product.drink_id and
                           size == cart_item.size), None)
 
         if cart_item:
@@ -214,11 +214,13 @@ class Cart:
 class Order:
     """Заказ"""
 
-    def __init__(self, order_id, barista_name):
-        self.order_id = order_id
-        self.barista_name = barista_name
+    def __init__(self, shift):
+        self.order_id = None
+
+        self.shift = shift
+
         self.items = []
-        self.status = "new"
+
         self.created_at = datetime.now().strftime("%H:%M:%S")
         self.total_amount = 0
 
@@ -226,31 +228,19 @@ class Order:
         self.items.append(cart_item)
         self.total_amount += cart_item.total
 
-    def to_dict(self):
-        return {
-            'order_id': self.order_id,
-            'barista': self.barista_name,
-            'items': [{'name': i.name, 'quantity': i.quantity, 'price': i.price} for i in self.items],
-            'total': self.total_amount,
-            'time': self.created_at
-        }
-
 
 class Shift:
-    def __init__(self):
-        self.shift_id = None
+    def __init__(self, shift_id=None, start_time=None, end_time=None, barista=None):
+        self.shift_id = shift_id
 
-        self.start_time = None
-        self.end_time = None
+        self.start_time = start_time
+        self.end_time = end_time
 
         self.status = False
 
-        self.barista: Optional[Barista] = None
+        self.barista: Optional[Barista] = barista
 
         self.orders: [Order] = []
-        self.total_revenue = 0
-
-        self.get_today_shift()
 
     def reset(self):
         self.shift_id = None
@@ -263,7 +253,24 @@ class Shift:
         self.barista: Optional[Barista] = None
 
         self.orders: [Order] = []
-        self.total_revenue = 0
+
+    @property
+    def total_revenue(self):
+        return sum(order.total_amount for order in self.orders)
+
+    @property
+    def total_hours(self) -> int:
+        start_time = self.start_time - timedelta(minutes=5)
+        start_time = start_time.replace(minute=0, second=0) + timedelta(hours=1)
+
+        if self.end_time:
+            close_time = self.end_time.replace(minute=0, second=0)
+            total_seconds = close_time.timestamp() - start_time.timestamp()
+        else:
+            close_time = datetime.now().replace(minute=0, second=0)
+            total_seconds = close_time.timestamp() - start_time.timestamp()
+
+        return int(total_seconds // 3600)
 
     def open(self, barista: Barista):
         self.barista = barista
@@ -280,10 +287,13 @@ class Shift:
             self.reset()
 
     def add_order(self, order):
-        self.orders.append(order)
+        order_db = database.create_order(self, order.items)
+        if order_db:
+            order.id = order_db.id
+            self.orders.append(order)
 
     def get_today_shift(self):
-        shift_db = database.get_today_shift()
+        shift_db = database.get_today_open_shift()
 
         if shift_db:
             self.status = True
@@ -293,3 +303,8 @@ class Shift:
             self.end_time = shift_db[2]
 
             self.barista = Barista(shift_db[4], shift_db[3])
+
+    def get_all(self) -> [Self]:
+        shifts_db = database.get_all_shifts(barista_id=self.barista.barista_id)
+        return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=self.barista) for shift in
+                shifts_db]

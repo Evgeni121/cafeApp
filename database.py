@@ -2,7 +2,8 @@ import os
 from datetime import datetime, date
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Table, MetaData, Column, Integer, String, select, Boolean, ForeignKey, Date, func
+from sqlalchemy import create_engine, Table, MetaData, Column, Integer, String, select, Boolean, ForeignKey, Date, func, \
+    Float
 from sqlalchemy.orm import sessionmaker
 
 CAFE_ID = 2
@@ -48,10 +49,77 @@ work_shift_table = Table(
     Column("is_paid", Boolean),
 )
 
+category_table = Table(
+    "category",
+    metadata_obj,
+    Column("id", Integer, primary_key=True),
+    Column("name", String),
+)
+
+drink_table = Table(
+    "drink",
+    metadata_obj,
+    Column("id", Integer, primary_key=True),
+    Column("cafe_id", Integer),
+    Column("category_id", Integer, ForeignKey("category.id")),
+    Column("name", String),
+    Column("price", Float),
+    Column("size", Integer),
+    Column("calories", Integer),
+    Column("visible", Boolean),
+)
+
+order_table = Table(
+    "order",
+    metadata_obj,
+    Column("id", Integer, primary_key=True),
+)
+
+order_drink_table = Table(
+    "order_drink",
+    metadata_obj,
+    Column("order_id", Integer, ForeignKey("order.id")),
+    Column("drink_id", Integer, ForeignKey("drink.id")),
+    Column("amount", Integer),
+)
+
 
 class DataBase:
     def __init__(self):
         pass
+
+    def get_categories(self):
+        with Session() as session:
+            stmt = (select(
+                category_table.c.id,
+                category_table.c.name,
+            )
+                    .select_from(
+                category_table
+            )
+        )
+
+            result = session.execute(stmt)
+            return result.fetchall()
+
+    def get_drinks(self, cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt = (select(
+                drink_table.c.id,
+                drink_table.c.category_id,
+                drink_table.c.name,
+                drink_table.c.price,
+                drink_table.c.size,
+                drink_table.c.calories,
+            )
+                    .select_from(
+                drink_table
+            )
+                    .where(drink_table.c.cafe_id == cafe_id)
+                    .where(drink_table.c.visible.is_(True)))
+
+            result = session.execute(stmt)
+            return result.fetchall()
 
     @classmethod
     def get_baristas(cls, cafe_id=CAFE_ID):
@@ -72,14 +140,14 @@ class DataBase:
                 )
             )
                     .where(cafe_user_table.c.cafe_id == cafe_id)
-                    .where(cafe_user_table.c.is_barista == True)
-                    .where(cafe_user_table.c.is_main_barista == False))
+                    .where(cafe_user_table.c.is_barista.is_(True))
+                    .where(cafe_user_table.c.is_main_barista.is_(False)))
 
             result = session.execute(stmt)
             return result.fetchall()
 
     @classmethod
-    def get_today_shift(cls, cafe_id=CAFE_ID):
+    def get_today_open_shift(cls, cafe_id=CAFE_ID):
         with Session() as session:
             stmt = (select(
                 work_shift_table.c.id,
@@ -91,10 +159,29 @@ class DataBase:
                     .join(cafe_user_table, work_shift_table.c.cafe_user_id == cafe_user_table.c.id)
                     .join(user_table, cafe_user_table.c.user_id == user_table.c.id)
                     .where(work_shift_table.c.cafe_id == cafe_id)
-                    .where(func.date(work_shift_table.c.datetime) == date.today()))
+                    .where(func.date(work_shift_table.c.datetime) == date.today())
+                    .where(work_shift_table.c.close_datetime.is_(None)))
 
             result = session.execute(stmt)
             return result.first()
+
+    @classmethod
+    def get_all_shifts(cls, barista_id, cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt = (select(
+                work_shift_table.c.id,
+                work_shift_table.c.datetime,
+                work_shift_table.c.close_datetime,
+            )
+                    .join(cafe_user_table, work_shift_table.c.cafe_user_id == cafe_user_table.c.id)
+                    .join(user_table, cafe_user_table.c.user_id == user_table.c.id)
+                    .where(work_shift_table.c.cafe_id == cafe_id)
+                    .where(work_shift_table.c.cafe_user_id == barista_id)
+                    .where(work_shift_table.c.is_paid.is_(False))
+                    .order_by(work_shift_table.c.datetime.desc()))
+
+            result = session.execute(stmt)
+            return result.fetchall()
 
     @classmethod
     def open_shift(cls, cafe_user_id, cafe_id=CAFE_ID):
@@ -127,3 +214,21 @@ class DataBase:
             result = session.execute(stmt)
             session.commit()
             return result.rowcount > 0
+
+    @classmethod
+    def create_order(cls, shift, drinks: [], cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt = work_shift_table.insert().values(
+                cafe_id=cafe_id,
+                cafe_user_id=shift.barista.barista_id,
+                datetime=datetime.now(),
+            ).returning(work_shift_table.c.id, work_shift_table.c.datetime)
+
+            try:
+                result = session.execute(stmt)
+                session.commit()
+                return result.fetchone()
+            except Exception as e:
+                session.rollback()
+                print(e)
+                return None

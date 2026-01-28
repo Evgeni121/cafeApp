@@ -5,7 +5,7 @@ from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 
 from barista_menu import BaristaMenuScreen, Barista
-from headers import Shift, CartItem, Cart
+from headers import Shift, CartItem, Cart, Menu
 from login_menu import LoginMenuScreen
 from main_menu import CafeMenuScreen
 
@@ -14,9 +14,12 @@ class PigBankApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.menu = Menu()
+
         self.cart: Optional[Cart] = Cart()
 
         self.shift: Shift = Shift()
+        self.shift.get_today_shift()
 
     def build(self):
         Window.size = (600, 750)

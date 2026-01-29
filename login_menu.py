@@ -1,18 +1,15 @@
 from kivy.uix.image import Image
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDButton, MDButtonText, MDButtonIcon
-from kivymd.uix.label import MDLabel, MDIcon
+from kivymd.uix.label import MDLabel
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
 
-from headers import Shift
 
-
-# ========== ЭКРАН ВХОДА ==========
 class LoginMenuScreen(MDScreen):
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         self.name = "login_menu"
         self.md_bg_color = "white"
 
@@ -30,23 +27,18 @@ class LoginMenuScreen(MDScreen):
             font_style="Display",
             theme_text_color="Custom",
             text_color="black",
-            # adaptive_height=True,
             size_hint_y=None,
             height=40,
-            # theme_bg_color="Custom",
-            # md_bg_color="pink",
-            # pos_hint={"center_x": 0.5, "center_y": 0.6},
+            pos_hint={"center_x": 0.5},
         )
 
         subtitle1 = MDLabel(
             text="Кофе, чай, свинки",
             halign="center",
-            # font_style="Headline",
-            # role="small",
             theme_text_color="Custom",
             text_color="black",
             adaptive_height=True,
-            # pos_hint={"center_x": 0.5, "center_y": 0.55},
+            pos_hint={"center_x": 0.5},
         )
 
         subtitle2 = MDLabel(
@@ -56,7 +48,7 @@ class LoginMenuScreen(MDScreen):
             text_color="black",
             size_hint_y=None,
             adaptive_height=True,
-            # pos_hint={"center_x": 0.5, "center_y": 0.45},
+            pos_hint={"center_x": 0.5},
         )
 
         open_button = MDButton(
@@ -66,14 +58,14 @@ class LoginMenuScreen(MDScreen):
             theme_bg_color="Custom",
             md_bg_color="pink",
             pos_hint={"center_x": 0.5},
+            on_release=self.go_to_barista_menu
         )
-        open_button.bind(on_release=self.go_to_barista_menu)
 
         layout = MDBoxLayout(
             orientation="vertical",
             padding=5,
             spacing=5,
-            pos_hint={"center_x": 0.5, "center_y": 0.8},
+            pos_hint={"center_x": 0.5, "center_y": 0.7},
         )
 
         layout.add_widget(logo)

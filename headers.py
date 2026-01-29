@@ -25,6 +25,12 @@ class Category:
     def name(self):
         return self._name
 
+    @classmethod
+    def get_by_name(cls, name):
+        res = database.get_category_by_name(name)
+        if res:
+            return Category(res[0], res[1])
+
 
 class Drink:
     def __init__(self, drink_id, category_id, name, prices, sizes, calories, sizes_label=None, volume=None):
@@ -214,21 +220,49 @@ class Cart:
 class Order:
     """Заказ"""
 
-    def __init__(self, order_id=None, shift_id=None, total_price=0, created_at=None):
+    def __init__(self, order_id=None, shift_id=None, total_price=0, drink_amount=0, created_at=None):
         self.order_id = order_id
 
         self.shift_id = shift_id
 
-        self.items: [CartItem] = []
+        self._items: [CartItem] = []
 
         time = created_at or datetime.now()
         self.created_at = time.strftime("%H:%M:%S")
 
         self.total_price = total_price
+        self.drink_amount = drink_amount
 
     def add_item(self, cart_item: CartItem):
-        self.items.append(cart_item)
+        self._items.append(cart_item)
+
         self.total_price += cart_item.total
+        self.drink_amount += cart_item.quantity
+
+    @property
+    def items(self):
+        if not self._items:
+            self.get_items()
+
+        return self._items
+
+    def get_items(self):
+        items_db = database.get_items(self.order_id)
+        if items_db:
+            category = Category.get_by_name("Десерты")
+            self.total_price = 0
+            self.drink_amount = 0
+
+            for item in items_db:
+                self.add_item(
+                    CartItem(
+                        product=Drink(drink_id=item[0], category_id=item[1], name=item[2],
+                                      prices=[item[3]], sizes=[item[4]], calories=[item[5]],
+                                      sizes_label=None, volume=category.category_id != item[1]),
+                        size=item[4],
+                        quantity=item[6]
+                    )
+                )
 
 
 class Shift:
@@ -240,12 +274,12 @@ class Shift:
 
         self.barista: Optional[Barista] = barista
 
-        self.orders: [Order] = []
-
         self.order_amount = order_amount
         self.revenue = revenue
 
-        self.status = False
+        self.orders: [Order] = []
+
+        self.is_active = False
 
     def reset(self):
         self.shift_id = None
@@ -255,19 +289,12 @@ class Shift:
 
         self.barista: Optional[Barista] = None
 
-        self.orders: [Order] = []
-
         self.order_amount = 0
         self.revenue = 0
 
-        self.status = False
+        self.is_active = False
 
-    @property
-    def total_revenue(self):
-        if self.orders:
-            return sum(order.total_amount for order in self.orders)
-        else:
-            return self.revenue
+        self.orders: [Order] = []
 
     @property
     def total_hours(self) -> int:
@@ -291,7 +318,7 @@ class Shift:
             self.shift_id = res.id
             self.start_time = res.datetime
 
-            self.status = True
+            self.is_active = True
 
     def close(self):
         res = database.close_today_shift(shift_id=self.shift_id, order_amount=self.order_amount, revenue=self.revenue)
@@ -299,13 +326,12 @@ class Shift:
             self.reset()
 
     def add_order(self, order: Order):
-        order_id_db = database.create_order(self, order.items)
+        order_id_db = database.create_order(self, order)
         if order_id_db:
             order.order_id = order_id_db
             self.orders.append(order)
 
             self.order_amount += 1
-
             self.revenue += order.total_price
 
     def get_today_shift(self):
@@ -318,18 +344,39 @@ class Shift:
 
             self.barista = Barista(shift_db[4], shift_db[3])
 
-            self.status = True
+            self.is_active = True
 
-            orders_db = database.get_orders(self.shift_id)
-            if orders_db:
-                for order_db in orders_db:
-                    order = Order(order_db.order_id, self.shift_id, order_db[1], created_at=order_db[2])
-                    self.orders.append(order)
-                    self.order_amount += 1
-                    self.revenue += order.total_price
+            self.get_orders()
 
-    def get_all(self) -> [Self]:
-        shifts_db = database.get_all_shifts(barista_id=self.barista.barista_id)
-        return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=self.barista,
-                      order_amount=shift[3], revenue=shift[4]) for shift in
-                shifts_db]
+    def get_orders(self):
+        if self.orders:
+            return
+
+        orders_db = database.get_orders(self.shift_id)
+        if orders_db:
+            for order_data in orders_db:
+                order = Order(
+                    order_id=order_data[0],
+                    shift_id=self.shift_id,
+                    total_price=order_data[1],
+                    drink_amount=order_data[2],
+                    created_at=order_data[3]
+                )
+
+                self.orders.append(order)
+                self.order_amount += 1
+                self.revenue += order.total_price
+
+    @classmethod
+    def get_all_shifts(cls, barista: Barista) -> [Self]:
+        shifts_db = database.get_all_shifts(barista_id=barista.barista_id)
+        return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=barista,
+                      order_amount=shift[3], revenue=shift[4]) for shift in shifts_db]
+
+    def delete_order(self, order: Order):
+        if database.delete_order(order.order_id):
+            if order in self.orders:
+                self.orders.remove(order)
+
+                self.order_amount -= 1
+                self.revenue -= order.total_price

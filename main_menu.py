@@ -12,7 +12,8 @@ from kivymd.uix.dialog import MDDialogButtonContainer, MDDialogHeadlineText, MDD
 from kivymd.uix.divider import MDDivider
 from kivymd.uix.fitimage import FitImage
 from kivymd.uix.label import MDLabel
-from kivymd.uix.list import MDListItemHeadlineText, MDListItem, MDList
+from kivymd.uix.list import MDListItemHeadlineText, MDListItem, MDList, MDListItemSupportingText, \
+    MDListItemTertiaryText, MDListItemTrailingIcon
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
@@ -51,7 +52,12 @@ class CafeMenuScreen(MDScreen):
         self.scroll_view = None
         self.cart_total_value_label = None
 
+        self.order_menu = None
+
         self.build_ui()
+
+        self.order_list = None
+        self.order_total_value = None
 
     def update_for_barista(self, barista: Barista):
         self.barista = barista
@@ -128,7 +134,7 @@ class CafeMenuScreen(MDScreen):
         self.categories_panel = MDBoxLayout(
             orientation="vertical",
             size_hint=(0.25, 1.0),
-            padding=[10, 10, 5, 5],
+            padding=[10, 10, 10, 5],
             # spacing=5,
             radius=[10, 10, 10, 10],
             # pos_hint={"center_x": 0.5, "center_y": 0.5},
@@ -181,7 +187,8 @@ class CafeMenuScreen(MDScreen):
                 md_bg_color="pink" if category == self.selected_category else TOP_APP_BAR_COLOR,
                 on_release=lambda x, cat=category: self.select_category(cat),
                 size_hint_y=None,
-                height="60dp"
+                height="60dp",
+                radius=[5, 5, 5, 5]
             )
 
             self.categories_list.add_widget(item)
@@ -352,7 +359,6 @@ class CafeMenuScreen(MDScreen):
                 halign="center",
                 valign="center",
                 size_hint_y=1.0,
-                bold=True
             )
 
             self.product_card_quantity_labels[product.drink_id] = quantity_label
@@ -507,7 +513,8 @@ class CafeMenuScreen(MDScreen):
 
         button.parent.parent.parent.parent.parent.children[1].children[0].children[
             1].text = f"{product.name} {product.selected_size} {product.size_unit}"
-        button.parent.parent.parent.parent.parent.children[1].children[0].children[0].text = f"{product.selected_price} BYN"
+        button.parent.parent.parent.parent.parent.children[1].children[0].children[
+            0].text = f"{product.selected_price} BYN"
 
     # Метод добавления в корзину
     def add_to_cart(self, product, size=None):
@@ -727,7 +734,7 @@ class CafeMenuScreen(MDScreen):
 
         self.scroll_view = MDScrollView(
             size_hint=(1, None),
-            height=dp(300)
+            height=dp(200)
         )
 
         self.cart_items_update()
@@ -811,11 +818,105 @@ class CafeMenuScreen(MDScreen):
         )
         dialog.open()
 
+    def show_shift_order_history(self, shift):
+        shift.get_orders()
+        self.show_order_history(shift.orders)
+
+    def order_list_update(self, shift_orders=None):
+        self.order_list.clear_widgets()
+
+        app = MDApp.get_running_app()
+        orders = shift_orders or app.shift.orders
+
+        for order in reversed(orders):
+            order_list_item = MDListItem(
+                MDListItemHeadlineText(
+                    text=f"Заказ №{order.order_id}",
+                    theme_text_color="Custom",
+                    text_color="black",
+                    font_style="Title",
+                    role="medium",
+                    bold=False
+                ),
+                MDListItemSupportingText(
+                    text=order.created_at,
+                    theme_text_color="Custom",
+                    text_color="black",
+                    font_style="Title",
+                    role="small",
+                    bold=False
+                ),
+                MDListItemTertiaryText(
+                    text=f"{order.drink_amount}"
+                         f" {"позиций" if order.drink_amount > 4 else "позиции" if order.drink_amount > 1 else "позиция"}"
+                         f" на сумму {order.total_price} BYN",
+                    theme_text_color="Custom",
+                    text_color="black",
+                    font_style="Title",
+                    role="small",
+                    bold=False
+                ),
+                MDIconButton(
+                    icon="dots-vertical",
+                    theme_icon_color="Custom",
+                    icon_color="black",
+                    theme_bg_color="Custom",
+                    md_bg_color="white",
+                    pos_hint={"center_x": 0.5, "center_y": 0.7},
+                    on_release=lambda x, o=order: self.show_order_menu(x, o)
+                ),
+                divider=True,
+                divider_color="black",
+                theme_bg_color="Custom",
+                md_bg_color=TOP_APP_BAR_COLOR,
+                on_release=lambda x, o=order: self.show_order_details(o)
+            )
+
+            self.order_list.add_widget(order_list_item)
+
+    def order_list_total_value_update(self, shift_orders=None):
+        self.order_total_value.clear_widgets()
+
+        app = MDApp.get_running_app()
+        orders = shift_orders or app.shift.orders
+
+        total_label = MDLabel(
+            text="Всего:",
+            theme_text_color="Custom",
+            text_color="black",
+            font_size=dp(20),
+            size_hint_x=0.5
+        )
+
+        total_amount = len(orders)
+        cart_total_amount_label = MDLabel(
+            text=f"{total_amount} {"заказов" if total_amount > 4 else "заказа" if total_amount > 1 else "заказ"}",
+            theme_text_color="Custom",
+            text_color="black",
+            font_size=dp(20),
+            bold=True,
+            halign="right",
+            size_hint_x=0.5
+        )
+
+        cart_total_value_label = MDLabel(
+            text=f"{sum(order.total_price for order in orders)} BYN",
+            theme_text_color="Custom",
+            text_color="black",
+            font_size=dp(20),
+            bold=True,
+            halign="right",
+            size_hint_x=0.5
+        )
+
+        self.order_total_value.add_widget(total_label)
+        self.order_total_value.add_widget(cart_total_amount_label)
+        self.order_total_value.add_widget(cart_total_value_label)
+
     def show_order_history(self, shift_orders=None):
         self.toolbar_menu.dismiss()
 
         app = MDApp.get_running_app()
-
         orders = shift_orders or app.shift.orders
 
         if not orders:
@@ -831,125 +932,62 @@ class CafeMenuScreen(MDScreen):
 
             return
 
-        history_content = MDBoxLayout(
-            orientation="vertical",
-            padding=10,
-            size_hint_y=None
+        header_box = MDBoxLayout(
+            orientation="horizontal",
+            adaptive_height=True,
+            spacing=5,
+            padding=[5, 5, 5, 5],
         )
-        history_content.bind(minimum_height=history_content.setter('height'))
 
-        total = 0
+        order_id_label = MDLabel(
+            text=f"Смена",
+            theme_text_color="Custom",
+            text_color="black",
+            size_hint_y=None,
+            height=dp(25)
+        )
 
-        for order in reversed(orders[-10:]):
-            order_card = MDBoxLayout(
-                orientation="vertical",
-                spacing=dp(10),
-                padding=10,
-                adaptive_height=True
-            )
+        time_label = MDLabel(
+            text=f"{app.shift.start_time.strftime("%d.%m.%Y")}",
+            halign="right",
+            theme_text_color="Custom",
+            text_color="black",
+            size_hint_y=None,
+            height=dp(25)
+        )
 
-            order_header = MDBoxLayout(
-                orientation="horizontal",
-                adaptive_height=True
-            )
+        header_box.add_widget(order_id_label)
+        header_box.add_widget(time_label)
 
-            order_id_label = MDLabel(
-                text=f"Заказ №{order.order_id}",
-                theme_text_color="Custom",
-                text_color="black",
-                bold=True,
-                size_hint_x=0.6
-            )
+        self.order_list = MDList()
 
-            order_time = MDLabel(
-                text=order.created_at,
-                theme_text_color="Custom",
-                text_color="black",
-                halign="right",
-                font_size="12sp",
-                size_hint_x=0.4
-            )
+        self.order_list_update(orders)
 
-            total += order.total_price
-
-            order_details_header = MDBoxLayout(
-                orientation="horizontal",
-                adaptive_height=True
-            )
-
-            order_details = MDLabel(
-                text=f"{len(order.items)} товаров на сумму {order.total_price} BYN",
-                theme_text_color="Custom",
-                text_color="black",
-                size_hint_y=None,
-                height="30dp"
-            )
-
-            details_button = MDIconButton(
-                icon="dots-vertical",
-                style="standard",
-                theme_bg_color="Custom",
-                md_bg_color="white",
-                theme_icon_color="Custom",
-                icon_color="black"
-            )
-            details_button.bind(on_release=lambda x, o=order: self.show_order_details(o))
-
-            order_header.add_widget(order_id_label)
-            order_header.add_widget(order_time)
-
-            order_details_header.add_widget(order_details)
-            order_details_header.add_widget(details_button)
-
-            order_card.add_widget(order_header)
-            order_card.add_widget(order_details_header)
-
-            history_content.add_widget(order_card)
-
-        scroll_view = MDScrollView(
-            size_hint=(1, None),
+        order_list_scroll_view = MDScrollView(
+            size_hint_y=None,
             height=dp(300)
         )
 
-        scroll_view.add_widget(history_content)
+        order_list_scroll_view.add_widget(self.order_list)
 
-        total_layout = MDBoxLayout(
+        self.order_total_value = MDBoxLayout(
             orientation="horizontal",
             size_hint_y=None,
             height=dp(60),
             spacing=5,
-            padding=[5, 5, 15, 5],
+            padding=[5, 5, 5, 5],
         )
 
-        total_label = MDLabel(
-            text="Всего:",
-            theme_text_color="Custom",
-            text_color="black",
-            font_size=dp(20),
-            bold=True,
-            size_hint_x=0.5
-        )
+        self.order_list_total_value_update(orders)
 
-        cart_total_value_label = MDLabel(
-            text=f"{total} BYN",
-            theme_text_color="Custom",
-            text_color="black",
-            font_size=dp(20),
-            bold=True,
-            halign="right",
-            size_hint_x=0.5
-        )
-
-        total_layout.add_widget(total_label)
-        total_layout.add_widget(cart_total_value_label)
-
-        dialog = MDDialog(
+        order_history_dialog = MDDialog(
             MDDialogHeadlineText(text="История заказов", theme_text_color="Custom", text_color="black"),
             MDDialogContentContainer(
+                header_box,
                 MDDivider(),
-                scroll_view,
+                order_list_scroll_view,
                 MDDivider(),
-                total_layout,
+                self.order_total_value,
                 orientation="vertical",
             ),
             MDDialogButtonContainer(
@@ -957,7 +995,47 @@ class CafeMenuScreen(MDScreen):
                 MDButton(
                     MDButtonText(text="Закрыть", theme_text_color="Custom", text_color="black"),
                     style="text",
+                    on_release=lambda x: order_history_dialog.dismiss()
+                ),
+            ),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
+
+        order_history_dialog.open()
+
+    def order_delete(self, order: Order):
+        self.order_menu.dismiss()
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(
+                text="Удалить заказ",
+                theme_text_color="Custom",
+                text_color="black"),
+            MDDialogSupportingText(
+                text=f"Удалить заказ №{order.order_id}?",
+                theme_text_color="Custom",
+                text_color="black"),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(
+                        text="Отмена",
+                        theme_text_color="Custom",
+                        text_color="black"),
+                    style="text",
                     on_release=lambda x: dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(
+                        text="Удалить",
+                        theme_text_color="Custom",
+                        text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.confirm_delete(order, dialog)
                 ),
             ),
             theme_bg_color="Custom",
@@ -965,6 +1043,27 @@ class CafeMenuScreen(MDScreen):
             radius=[5, 5, 5, 5],
         )
         dialog.open()
+
+    def confirm_delete(self, order: Order, dialog):
+        app = MDApp.get_running_app()
+        app.shift.delete_order(order)
+
+        dialog.dismiss()
+        self.order_list_update()
+        self.order_list_total_value_update()
+
+    def show_order_menu(self, button, order):
+        order_menu = [
+            {
+                "text": "Удалить",
+                "leading_icon": "trash-can-outline",
+                "on_release": lambda x=None, o=order: self.order_delete(o),
+            },
+        ]
+
+        self.order_menu = MDDropdownMenu(items=order_menu, )
+        self.order_menu.caller = button
+        self.order_menu.open()
 
     def show_order_details(self, order):
         # Создаем основной контейнер
@@ -978,15 +1077,15 @@ class CafeMenuScreen(MDScreen):
         # Шапка с номером заказа и временем
         header_box = MDBoxLayout(
             orientation="horizontal",
-            spacing=dp(5),
-            adaptive_height=True
+            adaptive_height=True,
+            spacing=5,
+            padding=[5, 5, 5, 5],
         )
 
         order_id_label = MDLabel(
             text=f"Заказ №{order.order_id}",
             theme_text_color="Custom",
             text_color="black",
-            bold=True,
             size_hint_y=None,
             height=dp(25)
         )
@@ -1020,7 +1119,7 @@ class CafeMenuScreen(MDScreen):
 
             # Название товара
             name_label = MDLabel(
-                text=f"{idx + 1} {item.name} x {item.quantity}",
+                text=f"{idx + 1} {item.name} {item.size} {item.size_unit} x {item.quantity}",
                 theme_text_color="Custom",
                 text_color="black",
                 size_hint_x=0.5,
@@ -1054,9 +1153,19 @@ class CafeMenuScreen(MDScreen):
             text="Итого:",
             theme_text_color="Custom",
             text_color="black",
-            bold=True,
             font_size="18sp",
             size_hint_x=0.5,
+        )
+
+        total_amount = MDLabel(
+            text=f"{order.drink_amount}"
+                 f" {"позиций" if order.drink_amount > 4 else "позиции" if order.drink_amount > 1 else "позиция"}",
+            theme_text_color="Custom",
+            text_color="black",
+            bold=True,
+            font_size="22sp",
+            size_hint_x=0.3,
+            halign="right"
         )
 
         total_value = MDLabel(
@@ -1070,14 +1179,21 @@ class CafeMenuScreen(MDScreen):
         )
 
         footer_box.add_widget(total_title)
+        footer_box.add_widget(total_amount)
         footer_box.add_widget(total_value)
 
         # Собираем все вместе
-        main_container.add_widget(header_box)
-        main_container.add_widget(MDDivider())
+        # main_container.add_widget(header_box)
+        # main_container.add_widget(MDDivider())
         main_container.add_widget(items_container)
-        main_container.add_widget(MDDivider())
-        main_container.add_widget(footer_box)
+        # main_container.add_widget(MDDivider())
+        # main_container.add_widget(footer_box)
+
+        scroll_view = MDScrollView(
+            size_hint=(1, None),
+            height=dp(200)
+        )
+        scroll_view.add_widget(main_container)
 
         order_details_dialog = MDDialog(
             MDDialogHeadlineText(
@@ -1086,11 +1202,11 @@ class CafeMenuScreen(MDScreen):
                 text_color="black"
             ),
             MDDialogContentContainer(
-                MDScrollView(
-                    main_container,
-                    size_hint=(1, None),
-                    height=dp(300)
-                ),
+                header_box,
+                MDDivider(),
+                scroll_view,
+                MDDivider(),
+                footer_box,
                 orientation="vertical",
             ),
             MDDialogButtonContainer(
@@ -1102,7 +1218,7 @@ class CafeMenuScreen(MDScreen):
                 ),
             ),
             size_hint=(0.85, None),
-            height=dp(min(300, 200 + len(order.items) * 45)),
+            height=dp(min(200, 100 + len(order.items) * 45)),
             theme_bg_color="Custom",
             md_bg_color="white",
             radius=[5, 5, 5, 5],
@@ -1114,7 +1230,7 @@ class CafeMenuScreen(MDScreen):
         self.toolbar_menu.dismiss()
 
         app = MDApp.get_running_app()
-        shifts = app.shift.get_all()
+        shifts = app.shift.get_all_shifts(app.shift.barista)
 
         if not shifts:
             MDSnackbar(
@@ -1172,7 +1288,7 @@ class CafeMenuScreen(MDScreen):
             )
 
             order_details = MDLabel(
-                text=f"{len(shift.orders)} заказов на сумму {shift.total_revenue} BYN",
+                text=f"{shift.order_amount} заказов на сумму {shift.revenue} BYN",
                 theme_text_color="Custom",
                 text_color="black",
                 size_hint_y=None,
@@ -1187,7 +1303,7 @@ class CafeMenuScreen(MDScreen):
                 theme_icon_color="Custom",
                 icon_color="black"
             )
-            details_button.bind(on_release=lambda x, o=shift.orders: self.show_order_history(o))
+            details_button.bind(on_release=lambda x, s=shift: self.show_shift_order_history(s))
 
             order_header.add_widget(order_id_label)
             order_header.add_widget(order_time)
@@ -1288,7 +1404,7 @@ class CafeMenuScreen(MDScreen):
         total_revenue = sum(order.total_price for order in app.shift.orders)
 
         dialog = MDDialog(
-            MDDialogHeadlineText(text="Закрыть смену", theme_text_color="Custom", text_color="black"),
+            MDDialogHeadlineText(text="Закрыть смену?", theme_text_color="Custom", text_color="black"),
             MDDialogSupportingText(text="Желаете закрыть смену?\n\n"
                                         f"Заказов за смену: {total_orders}\n"
                                         f"Выручка: {total_revenue} BYN",

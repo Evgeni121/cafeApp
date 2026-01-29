@@ -5,40 +5,36 @@ from kivymd.uix.button import MDButton, MDButtonText, MDButtonIcon
 from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialogButtonContainer, MDDialog, MDDialogHeadlineText, MDDialogSupportingText
 from kivymd.uix.label import MDLabel
-from kivymd.uix.list import MDListItem, MDListItemHeadlineText, MDList
+from kivymd.uix.list import MDList
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
-from headers import Shift, Barista, SECONDARY_COLOR, THIRD_COLOR
+from headers import Barista, THIRD_COLOR
 
 
 class BaristaMenuScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         self.name = "barista_menu"
         self.md_bg_color = "white"
-
-        main_layout = MDRelativeLayout()
 
         title = MDLabel(
             text="Укажите бариста",
             halign="center",
-            # font_style="Headline",
-            # role="small",
             theme_text_color="Custom",
             text_color="black",
             adaptive_height=True,
-            pos_hint={"center_x": 0.5, "center_y": 0.9},
+            pos_hint={"center_x": 0.5},
         )
 
         list_view = MDList(
             padding=10,
             spacing=15,
             size_hint=(0.6, 0.6),
-            pos_hint={"center_x": 0.5, "center_y": 0.7},
+            pos_hint={"center_x": 0.5},
         )
 
         for i, barista in enumerate(Barista.get_all()):
@@ -71,16 +67,6 @@ class BaristaMenuScreen(MDScreen):
 
             list_view.add_widget(item)
 
-        back_button = MDButton(
-            MDButtonIcon(icon="arrow-left", theme_text_color="Custom", text_color="black"),
-            MDButtonText(text="Назад", theme_text_color="Custom", text_color="black"),
-            style="elevated",
-            theme_bg_color="Custom",
-            md_bg_color="pink",
-            pos_hint={"center_x": 0.5, "center_y": 0.05},
-        )
-        back_button.bind(on_release=self.go_back)
-
         layout = MDBoxLayout(
             orientation="vertical",
             padding=5,
@@ -91,14 +77,25 @@ class BaristaMenuScreen(MDScreen):
         layout.add_widget(title)
         layout.add_widget(list_view)
 
-        main_layout.add_widget(layout)
+        back_button = MDButton(
+            MDButtonIcon(icon="arrow-left", theme_text_color="Custom", text_color="black"),
+            MDButtonText(text="Назад", theme_text_color="Custom", text_color="black"),
+            style="elevated",
+            theme_bg_color="Custom",
+            md_bg_color="pink",
+            pos_hint={"center_x": 0.5, "center_y": 0.1},
+            on_release=self.go_back
+        )
 
+        main_layout = MDRelativeLayout()
+        main_layout.add_widget(layout)
         main_layout.add_widget(back_button)
+
         self.add_widget(main_layout)
 
     def select_barista(self, barista: Barista):
         dialog = MDDialog(
-            MDDialogHeadlineText(text="Открыть смену", theme_text_color="Custom", text_color="black"),
+            MDDialogHeadlineText(text="Открыть смену?", theme_text_color="Custom", text_color="black"),
             MDDialogSupportingText(text=f"Открыть смену для бариста {barista.name}?",
                                    theme_text_color="Custom", text_color="black"),
             MDDialogButtonContainer(
@@ -106,8 +103,6 @@ class BaristaMenuScreen(MDScreen):
                 MDButton(
                     MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
                     style="text",
-                    # theme_bg_color="Custom",
-                    # md_bg_color="pink",
                     on_release=lambda x: dialog.dismiss()
                 ),
                 MDButton(

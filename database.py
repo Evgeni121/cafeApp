@@ -90,6 +90,7 @@ order_table = Table(
     Column("discount", Float),
     Column("discount_price", Float),
     Column("shift_id", Integer, ForeignKey("work_shift.id")),
+    Column("drink_amount", Integer),
 )
 
 order_drink_table = Table(
@@ -119,6 +120,21 @@ class DataBase:
 
             result = session.execute(stmt)
             return result.fetchall()
+
+    def get_category_by_name(self, name):
+        with Session() as session:
+            stmt = (select(
+                category_table.c.id,
+                category_table.c.name,
+            )
+                    .select_from(
+                category_table
+            )
+                    .where(category_table.c.name == name)
+            )
+
+            result = session.execute(stmt)
+            return result.first()
 
     def get_drinks(self, cafe_id=CAFE_ID):
         with Session() as session:
@@ -185,7 +201,7 @@ class DataBase:
             return result.first()
 
     @classmethod
-    def get_all_shifts(cls, barista_id, cafe_id=CAFE_ID):
+    def get_all_shifts(cls, barista_id: int, cafe_id=CAFE_ID):
         with Session() as session:
             stmt = (select(
                 work_shift_table.c.id,
@@ -199,6 +215,7 @@ class DataBase:
                     .where(work_shift_table.c.cafe_id == cafe_id)
                     .where(work_shift_table.c.cafe_user_id == barista_id)
                     .where(work_shift_table.c.is_paid.is_(False))
+                    .where(work_shift_table.c.close_datetime.is_not(None))
                     .order_by(work_shift_table.c.datetime.desc()))
 
             result = session.execute(stmt)
@@ -237,14 +254,12 @@ class DataBase:
             return result.rowcount > 0
 
     @classmethod
-    def create_order(cls, shift, items: [], cafe_id=CAFE_ID):
+    def create_order(cls, shift, order, cafe_id=CAFE_ID):
         with Session() as session:
-            total_price = sum(item.total for item in items)
-
             stmt_order = order_table.insert().values(
                 is_free=False,
-                price=total_price,
-                discount_price=total_price,
+                price=order.total_price,
+                discount_price=order.total_price,
                 datetime=datetime.now(),
                 time=datetime.now(),
                 complete_time=datetime.now(),
@@ -255,12 +270,13 @@ class DataBase:
                 is_thrown_out=False,
                 cafe_id=cafe_id,
                 shift_id=shift.shift_id,
+                drink_amount=order.drink_amount
             ).returning(order_table.c.id)
 
             result_order = session.execute(stmt_order)
             order_id = result_order.fetchone()[0]
 
-            for item in items:
+            for item in order.items:
                 stmt_order_drink = order_drink_table.insert().values(
                     order_id=order_id,
                     drink_id=item.product.drink_id,
@@ -272,15 +288,56 @@ class DataBase:
             return order_id
 
     @classmethod
+    def delete_order(cls, order_id: int, cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt_delete_drinks = order_drink_table.delete().where(
+                order_drink_table.c.order_id == order_id
+            )
+            session.execute(stmt_delete_drinks)
+
+            stmt_delete_order = order_table.delete().where(
+                order_table.c.id == order_id,
+                order_table.c.cafe_id == cafe_id
+            )
+
+            result = session.execute(stmt_delete_order)
+            session.commit()
+            return result.rowcount > 0
+
+    @classmethod
     def get_orders(cls, shift_id: int, cafe_id=CAFE_ID):
         with Session() as session:
             stmt = (select(
                 order_table.c.id,
                 order_table.c.discount_price,
-                order_table.c.datetime
+                order_table.c.drink_amount,
+                order_table.c.datetime,
+            )
+                    .select_from(
+                order_table
             )
                     .where(order_table.c.cafe_id == cafe_id)
-                    .where(order_table.c.shift_id == shift_id))
+                    .where(order_table.c.shift_id == shift_id)
+                    .order_by(order_table.c.id))
 
-            result = session.execute(stmt)
-            return result.fetchall()
+            return session.execute(stmt).fetchall()
+
+    @classmethod
+    def get_items(cls, order_id: int, cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt = (select(
+                drink_table.c.id,
+                drink_table.c.category_id,
+                drink_table.c.name,
+                drink_table.c.price,
+                drink_table.c.size,
+                drink_table.c.calories,
+                order_drink_table.c.amount,
+            )
+                    .select_from(
+                drink_table.join(order_drink_table, order_drink_table.c.drink_id == drink_table.c.id)
+            )
+                    .where(order_drink_table.c.order_id == order_id)
+                    .where(drink_table.c.cafe_id == cafe_id))
+
+            return session.execute(stmt).fetchall()

@@ -4,8 +4,8 @@ from kivy.core.window import Window
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 
-from barista_menu import BaristaMenuScreen, Barista
-from headers import Shift, CartItem, Cart, Menu
+from barista_menu import BaristaMenuScreen
+from headers import Shift, Cart, Menu
 from login_menu import LoginMenuScreen
 from main_menu import CafeMenuScreen
 
@@ -14,9 +14,9 @@ class PigBankApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.menu = Menu()
+        self.menu: Menu = Menu()
 
-        self.cart: Optional[Cart] = Cart()
+        self.cart: Cart = Cart()
 
         self.shift: Shift = Shift()
         self.shift.get_today_shift()
@@ -28,11 +28,12 @@ class PigBankApp(MDApp):
         self.theme_cls.primary_palette = "Pink"
 
         screen_manager = MDScreenManager()
+
         screen_manager.add_widget(LoginMenuScreen())
         screen_manager.add_widget(BaristaMenuScreen())
         screen_manager.add_widget(CafeMenuScreen())
 
-        if self.shift.status:
+        if self.shift.is_active:
             screen_manager.current = "main_menu"
         else:
             screen_manager.current = "login_menu"

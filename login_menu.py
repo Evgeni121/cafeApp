@@ -14,7 +14,7 @@ class LoginMenuScreen(MDScreen):
         self.md_bg_color = "white"
 
         logo = Image(
-            source='images/logo.png',
+            source='assets/images/logo.png',
             size_hint=(None, None),
             size=("150dp", "150dp"),
             pos_hint={"center_x": 0.5},

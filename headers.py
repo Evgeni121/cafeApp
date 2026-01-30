@@ -292,9 +292,9 @@ class Shift:
         self.order_amount = 0
         self.revenue = 0
 
-        self.is_active = False
-
         self.orders: [Order] = []
+
+        self.is_active = False
 
     @property
     def total_hours(self) -> int:
@@ -311,22 +311,31 @@ class Shift:
         return int(total_seconds // 3600)
 
     def open(self, barista: Barista):
-        self.barista = barista
+        res = database.open_shift(cafe_user_id=barista.barista_id)
 
-        res = database.open_shift(cafe_user_id=self.barista.barista_id)
         if res:
             self.shift_id = res.id
             self.start_time = res.datetime
 
+            self.barista = barista
+
             self.is_active = True
 
     def close(self):
-        res = database.close_today_shift(shift_id=self.shift_id, order_amount=self.order_amount, revenue=self.revenue)
+        res = database.close_shift(shift_id=self.shift_id, order_amount=self.order_amount, revenue=self.revenue)
+
         if res:
             self.reset()
 
+    @classmethod
+    def delete(cls, shift):
+        res = database.delete_shift(shift_id=shift.shift_id)
+        if res:
+            return True
+
     def add_order(self, order: Order):
-        order_id_db = database.create_order(self, order)
+        order_id_db = database.create_order(self.shift_id, order)
+
         if order_id_db:
             order.order_id = order_id_db
             self.orders.append(order)

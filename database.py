@@ -216,7 +216,7 @@ class DataBase:
                     .where(work_shift_table.c.cafe_user_id == barista_id)
                     .where(work_shift_table.c.is_paid.is_(False))
                     .where(work_shift_table.c.close_datetime.is_not(None))
-                    .order_by(work_shift_table.c.datetime.desc()))
+                    .order_by(work_shift_table.c.datetime))
 
             result = session.execute(stmt)
             return result.fetchall()
@@ -241,7 +241,7 @@ class DataBase:
                 return None
 
     @classmethod
-    def close_today_shift(cls, shift_id: int, order_amount, revenue, cafe_id=CAFE_ID):
+    def close_shift(cls, shift_id: int, order_amount, revenue, cafe_id=CAFE_ID):
         with Session() as session:
             stmt = (work_shift_table.update()
                     .where(work_shift_table.c.id == shift_id)
@@ -254,7 +254,7 @@ class DataBase:
             return result.rowcount > 0
 
     @classmethod
-    def create_order(cls, shift, order, cafe_id=CAFE_ID):
+    def create_order(cls, shift_id, order, cafe_id=CAFE_ID):
         with Session() as session:
             stmt_order = order_table.insert().values(
                 is_free=False,
@@ -269,7 +269,7 @@ class DataBase:
                 is_completed=True,
                 is_thrown_out=False,
                 cafe_id=cafe_id,
-                shift_id=shift.shift_id,
+                shift_id=shift_id,
                 drink_amount=order.drink_amount
             ).returning(order_table.c.id)
 
@@ -341,3 +341,37 @@ class DataBase:
                     .where(drink_table.c.cafe_id == cafe_id))
 
             return session.execute(stmt).fetchall()
+
+    @classmethod
+    def delete_shift(cls, shift_id: int, cafe_id=CAFE_ID):
+        with Session() as session:
+            # 1. Находим все заказы этой смены
+            orders_stmt = select(order_table.c.id).where(
+                order_table.c.shift_id == shift_id,
+                order_table.c.cafe_id == cafe_id
+            )
+            orders = session.execute(orders_stmt).fetchall()
+            order_ids = [order.id for order in orders]
+
+            if order_ids:
+                # 2. Удаляем напитки из заказов
+                delete_drinks_stmt = order_drink_table.delete().where(
+                    order_drink_table.c.order_id.in_(order_ids)
+                )
+                session.execute(delete_drinks_stmt)
+
+                # 3. Удаляем заказы
+                delete_orders_stmt = order_table.delete().where(
+                    order_table.c.id.in_(order_ids)
+                )
+                session.execute(delete_orders_stmt)
+
+            # 4. Удаляем смену
+            delete_shift_stmt = work_shift_table.delete().where(
+                work_shift_table.c.id == shift_id,
+                work_shift_table.c.cafe_id == cafe_id
+            )
+
+            result = session.execute(delete_shift_stmt)
+            session.commit()
+            return result.rowcount > 0

@@ -101,6 +101,18 @@ order_drink_table = Table(
     Column("amount", Integer),
 )
 
+ingredient_table = Table(
+    "ingredient",
+    metadata_obj,
+    Column("id", Integer, primary_key=True),
+    Column("cafe_id", Integer, ForeignKey("cafe.id")),
+    Column("name", String),
+    Column("price", Float),
+    Column("size", Integer),
+    Column("calories", Integer),
+    Column("amount", Integer),
+)
+
 
 class DataBase:
     def __init__(self):
@@ -131,7 +143,7 @@ class DataBase:
                 category_table
             )
                     .where(category_table.c.name == name)
-            )
+                    )
 
             result = session.execute(stmt)
             return result.first()
@@ -375,3 +387,20 @@ class DataBase:
             result = session.execute(delete_shift_stmt)
             session.commit()
             return result.rowcount > 0
+
+    @classmethod
+    def get_all_ingredients(cls, cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt = (select(
+                ingredient_table.c.id,
+                ingredient_table.c.name,
+                ingredient_table.c.price,
+                ingredient_table.c.size,
+                ingredient_table.c.calories,
+                ingredient_table.c.amount,
+            )
+                    .where(ingredient_table.c.cafe_id == cafe_id)
+                    .order_by(ingredient_table.c.name))
+
+            result = session.execute(stmt)
+            return result.fetchall()

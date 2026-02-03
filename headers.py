@@ -159,7 +159,7 @@ class Barista:
         self._is_admin = is_admin
 
     @classmethod
-    def get_all(cls) -> [Self]:
+    def get_all_baristas(cls) -> [Self]:
         baristas_db = database.get_baristas()
 
         baristas = []
@@ -399,3 +399,28 @@ class Shift:
 
                 self.order_amount -= 1
                 self.revenue -= order.total_price
+
+
+class Ingredient:
+    def __init__(self, ingredient_id, name, price, size, calories, amount):
+        self._ingredient_id = ingredient_id
+        self._name = name
+        self._price = price
+        self._size = size
+        self._calories = calories
+        self._amount = amount
+
+    @classmethod
+    def get_all(cls):
+        ingredients_db = database.get_all_ingredients()
+        if ingredients_db:
+            return [Ingredient(ingredient_db[0], ingredient_db[1], ingredient_db[2], ingredient_db[3], ingredient_db[4],
+                               ingredient_db[5]) for ingredient_db in ingredients_db]
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def amount(self):
+        return self._amount

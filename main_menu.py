@@ -851,7 +851,7 @@ class CafeMenuScreen(MDScreen):
                 ),
                 MDListItemTertiaryText(
                     text=f"{order.drink_amount}"
-                         f" {"позиций" if order.drink_amount > 4 else "позиции" if order.drink_amount > 1 else "позиция"}"
+                         f" {'позиций' if order.drink_amount > 4 else 'позиции' if order.drink_amount > 1 else 'позиция'}"
                          f" на сумму {order.total_price} BYN",
                     theme_text_color="Custom",
                     text_color="black",
@@ -893,7 +893,7 @@ class CafeMenuScreen(MDScreen):
 
         total_amount = len(orders)
         cart_total_amount_label = MDLabel(
-            text=f"{total_amount} {"заказов" if total_amount > 4 else "заказа" if total_amount > 1 else "заказ"}",
+            text=f"{total_amount} {'заказов' if total_amount > 4 else 'заказа' if total_amount > 1 else 'заказ'}",
             theme_text_color="Custom",
             text_color="black",
             font_size=dp(20),

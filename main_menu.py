@@ -109,7 +109,7 @@ class CafeMenuScreen(MDScreen):
                 )
             ),
             MDTopAppBarTitle(
-                text=f"Бариста {self.barista.name if self.barista else "Бариста"}",
+                text=f"Бариста {self.barista.name if self.barista else 'Бариста'}",
                 theme_text_color="Custom",
                 text_color="black",
                 pos_hint={"center_x": .5},

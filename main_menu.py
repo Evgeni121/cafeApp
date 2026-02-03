@@ -953,7 +953,7 @@ class CafeMenuScreen(MDScreen):
         )
 
         time_label = MDLabel(
-            text=f"{shift.start_time.strftime("%d.%m.%Y")}",
+            text=f"{shift.start_time.strftime('%d.%m.%Y')}",
             halign="right",
             theme_text_color="Custom",
             text_color="black",
@@ -1165,7 +1165,7 @@ class CafeMenuScreen(MDScreen):
 
         total_amount = MDLabel(
             text=f"{order.drink_amount}"
-                 f" {"позиций" if order.drink_amount > 4 else "позиции" if order.drink_amount > 1 else "позиция"}",
+                 f" {'позиций' if order.drink_amount > 4 else 'позиции' if order.drink_amount > 1 else 'позиция'}",
             theme_text_color="Custom",
             text_color="black",
             bold=True,

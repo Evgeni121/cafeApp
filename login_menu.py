@@ -5,6 +5,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.dialog import MDDialog, MDDialogButtonContainer, MDDialogContentContainer, MDDialogHeadlineText
+from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.textfield import MDTextField, MDTextFieldHintText, MDTextFieldLeadingIcon
 from kivy.metrics import dp
 from kivymd.uix.widget import MDWidget
@@ -150,7 +151,9 @@ class LoginMenuScreen(MDScreen):
                 ),
                 MDButton(
                     MDButtonText(text="Войти", theme_text_color="Custom", text_color="black"),
-                    style="text",
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
                     on_release=self.process_admin_auth
                 ),
             ),
@@ -167,14 +170,29 @@ class LoginMenuScreen(MDScreen):
         password = self.password_field.text
 
         # Ваша логика проверки
-        if login == "admin" and password == "admin123":
-            print("Успешная авторизация админа")
-            # Переход на экран админа
-            # self.manager.current = "admin_panel"
+        if login == "admin" and password == "admin321":
+            text = "Авторизация прошла успешно"
+            self.auth_dialog.dismiss()
+            self.go_to_admin_menu()
         else:
-            print("Неверный логин или пароль")
+            text = "Неверный логин или пароль"
 
-        self.auth_dialog.dismiss()
+        MDSnackbar(
+            MDSnackbarText(
+                text=text,
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.8,
+            theme_bg_color="Primary",
+            radius=[10, 10, 10, 10],
+            duration=1,
+        ).open()
 
     def go_to_barista_menu(self, *args):
         self.manager.current = "barista_menu"
+
+    def go_to_admin_menu(self, *args):
+        self.manager.current = "admin_menu"

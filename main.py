@@ -1,13 +1,12 @@
-from typing import Optional
-
 from kivy.core.window import Window
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 
+from admin_menu import AdminMenuScreen
 from barista_menu import BaristaMenuScreen
 from headers import Shift, Cart, Menu
 from login_menu import LoginMenuScreen
-from main_menu import CafeMenuScreen
+from main_menu import MainMenuScreen
 
 
 class PigBankApp(MDApp):
@@ -31,7 +30,8 @@ class PigBankApp(MDApp):
 
         screen_manager.add_widget(LoginMenuScreen())
         screen_manager.add_widget(BaristaMenuScreen())
-        screen_manager.add_widget(CafeMenuScreen())
+        screen_manager.add_widget(AdminMenuScreen())
+        screen_manager.add_widget(MainMenuScreen())
 
         if self.shift.is_active:
             screen_manager.current = "main_menu"

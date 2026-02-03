@@ -132,6 +132,8 @@ class Barista:
         self._barista_id = barista_id
         self._name = name
 
+        self._is_admin = False
+
     @property
     def barista_id(self):
         return self._barista_id
@@ -147,6 +149,14 @@ class Barista:
     @name.setter
     def name(self, name):
         self._name = name
+
+    @property
+    def is_admin(self):
+        return self._is_admin
+
+    @is_admin.setter
+    def is_admin(self, is_admin):
+        self._is_admin = is_admin
 
     @classmethod
     def get_all(cls) -> [Self]:

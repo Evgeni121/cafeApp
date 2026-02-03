@@ -26,7 +26,7 @@ from headers import Order, Barista, SECONDARY_COLOR, TOP_APP_BAR_COLOR, FOURTH_C
     THIRD_COLOR, Shift
 
 
-class CafeMenuScreen(MDScreen):
+class MainMenuScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = "main_menu"

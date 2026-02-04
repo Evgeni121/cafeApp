@@ -37,7 +37,7 @@ class LoginMenuScreen(MDScreen):
             theme_text_color="Custom",
             text_color="black",
             size_hint_y=None,
-            height=40,
+            height=120,
             pos_hint={"center_x": 0.5},
         )
 

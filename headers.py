@@ -318,7 +318,9 @@ class Shift:
             close_time = datetime.now().replace(minute=0, second=0)
             total_seconds = close_time.timestamp() - start_time.timestamp()
 
-        return int(total_seconds // 3600)
+        hours = int(total_seconds // 3600)
+        hours = 0 if hours < 0 else hours
+        return hours
 
     def open(self, barista: Barista):
         res = database.open_shift(cafe_user_id=barista.barista_id)

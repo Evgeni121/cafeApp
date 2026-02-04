@@ -12,7 +12,7 @@ from kivymd.uix.dialog import MDDialogButtonContainer, MDDialogHeadlineText, MDD
 from kivymd.uix.divider import MDDivider
 from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDListItemHeadlineText, MDListItem, MDList, MDListItemSupportingText, \
-    MDListItemLeadingIcon
+    MDListItemLeadingIcon, MDListItemTertiaryText
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.textfield import MDTextField, MDTextFieldHintText
@@ -30,7 +30,7 @@ class AdminMenuScreen(MDScreen):
         self.top_app_bar = None
 
         self.content_panel = None
-        self.content_list = None
+        content_list = None
 
         self.back_button_place = None
         self.top_app_bar_title = None
@@ -85,7 +85,12 @@ class AdminMenuScreen(MDScreen):
         self.top_app_bar_title.text = "Кафе"
 
         # Очищаем контент
-        self.content_list.clear_widgets()
+        self.content_panel.clear_widgets()
+
+        content_list = MDList(
+            spacing=10,
+            padding=10,
+        )
 
         # Добавляем элементы главного меню
         menu_items = [
@@ -114,10 +119,13 @@ class AdminMenuScreen(MDScreen):
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
                 on_release=lambda x, i=item: i["action"](),
-                size_hint_y=None,
-                height=dp(80)
             )
-            self.content_list.add_widget(menu_item)
+            content_list.add_widget(menu_item)
+
+        scroll = MDScrollView()
+        scroll.add_widget(content_list)
+
+        self.content_panel.add_widget(scroll)
 
     def content_panel_init(self):
         self.content_panel = MDBoxLayout(
@@ -129,16 +137,6 @@ class AdminMenuScreen(MDScreen):
             md_bg_color=TOP_APP_BAR_COLOR
         )
 
-        self.content_list = MDList(
-            spacing=10,
-            padding=10,
-        )
-
-        scroll = MDScrollView()
-        scroll.add_widget(self.content_list)
-
-        self.content_panel.add_widget(scroll)
-
         # Показываем главное меню
         self.show_main_menu()
 
@@ -149,7 +147,12 @@ class AdminMenuScreen(MDScreen):
         self.top_app_bar_title.text = "Бариста"
 
         # Очищаем контент
-        self.content_list.clear_widgets()
+        self.content_panel.clear_widgets()
+
+        content_list = MDList(
+            spacing=10,
+            padding=10,
+        )
 
         baristas = Barista.get_all_baristas()
 
@@ -163,10 +166,8 @@ class AdminMenuScreen(MDScreen):
                 ),
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
-                size_hint_y=None,
-                height=dp(80)
             )
-            self.content_list.add_widget(empty_item)
+            content_list.add_widget(empty_item)
             return
 
         for barista in baristas:
@@ -196,23 +197,39 @@ class AdminMenuScreen(MDScreen):
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
                 on_release=lambda x, b=barista: self.show_barista_shifts(b),
-                size_hint_y=None,
-                height=dp(80)
             )
-            self.content_list.add_widget(barista_item)
+            content_list.add_widget(barista_item)
+
+        scroll = MDScrollView()
+        scroll.add_widget(content_list)
+
+        self.content_panel.add_widget(scroll)
 
     def show_barista_shifts(self, barista):
         self.current_menu = "Смены"
         self.top_app_bar_title.text = "Смены"
 
         # Очищаем контент
-        self.content_list.clear_widgets()
+        self.content_panel.clear_widgets()
+
+        content_list = MDList(
+            spacing=10,
+            padding=10,
+        )
 
         app = MDApp.get_running_app()
         shifts = app.shift.get_all_shifts(barista) if hasattr(app, 'shift') else []
 
-        # Заголовок
-        header_item = MDListItem(
+        total_hours = 0
+        total_revenue = 0
+        total_order_amount = 0
+
+        for shift in shifts:
+            total_hours += shift.total_hours
+            total_revenue += shift.revenue
+            total_order_amount += shift.order_amount
+
+        header = MDListItem(
             MDListItemLeadingIcon(
                 icon="account",
             ),
@@ -222,19 +239,21 @@ class AdminMenuScreen(MDScreen):
                 text_color="black",
             ),
             MDListItemSupportingText(
-                text="Смены",
+                text=f"Всего смен: {len(shifts)}",
+                theme_text_color="Custom",
+                text_color="black",
+            ),
+            MDListItemSupportingText(
+                text=f"Заказов: {total_order_amount} | Выручка: {total_revenue} BYN | Часы: {total_hours}",
                 theme_text_color="Custom",
                 text_color="gray",
             ),
             theme_bg_color="Custom",
-            md_bg_color="pink",
-            size_hint_y=None,
-            height=dp(100)
+            md_bg_color=TOP_APP_BAR_COLOR,
+            on_release=lambda x: (),
         )
-        self.content_list.add_widget(header_item)
 
-        total_income = 0
-        total_expenses = 0
+        self.content_panel.add_widget(header)
 
         if not shifts:
             no_shifts_item = MDListItem(
@@ -246,76 +265,43 @@ class AdminMenuScreen(MDScreen):
                 ),
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
-                size_hint_y=None,
-                height=dp(80)
             )
-            self.content_list.add_widget(no_shifts_item)
+            content_list.add_widget(no_shifts_item)
         else:
             for shift in shifts:
-                income = shift.income if hasattr(shift, 'income') else 0
-                expenses = shift.expenses if hasattr(shift, 'expenses') else 0
-                total_income += income
-                total_expenses += expenses
-
-                shift_date = shift.date if hasattr(shift, 'date') else "Дата неизвестна"
-
                 shift_item = MDListItem(
                     MDListItemLeadingIcon(
                         icon="clock",
                     ),
                     MDListItemHeadlineText(
-                        text=f"Смена: {shift_date}",
+                        text=f"Смена: {shift.start_time.strftime('%d.%m.%Y')}",
                         theme_text_color="Custom",
                         text_color="black",
                     ),
                     MDListItemSupportingText(
-                        text=f"Доход: {income} ₽ | Расходы: {expenses} ₽",
+                        text=f"Заказов: {shift.order_amount} | Выручка: {shift.revenue} BYN | Часы: {shift.total_hours}",
                         theme_text_color="Custom",
                         text_color="gray",
                     ),
+                    MDIconButton(
+                        icon="dots-vertical",
+                        theme_icon_color="Custom",
+                        icon_color="black",
+                        theme_bg_color="Custom",
+                        md_bg_color="white",
+                        pos_hint={"center_x": 0.5, "center_y": 0.5},
+                        on_release=lambda x: (),
+                    ),
                     theme_bg_color="Custom",
                     md_bg_color=TOP_APP_BAR_COLOR,
-                    size_hint_y=None,
-                    height=dp(100)
+                    on_release=lambda x: ()
                 )
-                self.content_list.add_widget(shift_item)
+                content_list.add_widget(shift_item)
 
-        # Статистика
-        if shifts:
-            stats_item = MDListItem(
-                MDListItemLeadingIcon(
-                    icon="chart-box",
-                ),
-                MDListItemHeadlineText(
-                    text="Общая статистика:",
-                    theme_text_color="Custom",
-                    text_color="black",
-                ),
-                MDListItemSupportingText(
-                    text=f"Всего смен: {len(shifts)}",
-                    theme_text_color="Custom",
-                    text_color="black",
-                ),
-                MDListItemSupportingText(
-                    text=f"Доход: {total_income} ₽ | Расходы: {total_expenses} ₽",
-                    theme_text_color="Custom",
-                    text_color="gray",
-                ),
-                MDIconButton(
-                    icon="dots-vertical",
-                    theme_icon_color="Custom",
-                    icon_color="black",
-                    theme_bg_color="Custom",
-                    md_bg_color="white",
-                    pos_hint={"center_x": 0.5, "center_y": 0.5},
-                    on_release=lambda x: (),
-                ),
-                theme_bg_color="Custom",
-                md_bg_color=TOP_APP_BAR_COLOR,
-                size_hint_y=None,
-                height=dp(120)
-            )
-            self.content_list.add_widget(stats_item)
+        scroll = MDScrollView()
+        scroll.add_widget(content_list)
+
+        self.content_panel.add_widget(scroll)
 
     def show_finance(self):
         self.current_menu = "Финансы"
@@ -325,7 +311,12 @@ class AdminMenuScreen(MDScreen):
         self.top_app_bar_title.text = "Финансы"
 
         # Очищаем контент
-        self.content_list.clear_widgets()
+        self.content_panel.clear_widgets()
+
+        content_list = MDList(
+            spacing=10,
+            padding=10,
+        )
 
         # Заглушки для данных
         finance_data = [
@@ -348,19 +339,14 @@ class AdminMenuScreen(MDScreen):
                     text_color="black",
                 ),
                 MDListItemSupportingText(
-                    text=f"Доход: {data['income']} ₽",
+                    text=f"Выручка: {data['income']} BYN | Расходы: {data['expenses']} BYN",
                     theme_text_color="Custom",
-                    text_color="green",
+                    text_color="black",
                 ),
-                MDListItemSupportingText(
-                    text=f"Расходы: {data['expenses']} ₽",
+                MDListItemTertiaryText(
+                    text=f"Прибыль: {profit} BYN",
                     theme_text_color="Custom",
-                    text_color="red",
-                ),
-                MDListItemSupportingText(
-                    text=f"Прибыль: {profit} ₽",
-                    theme_text_color="Custom",
-                    text_color="purple" if profit > 0 else "red",
+                    text_color="green" if profit > 0 else "red",
                 ),
                 MDIconButton(
                     icon="dots-vertical",
@@ -373,10 +359,14 @@ class AdminMenuScreen(MDScreen):
                 ),
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
-                size_hint_y=None,
-                height=dp(120)
+                on_release=lambda x: ()
             )
-            self.content_list.add_widget(finance_item)
+            content_list.add_widget(finance_item)
+
+        scroll = MDScrollView()
+        scroll.add_widget(content_list)
+
+        self.content_panel.add_widget(scroll)
 
     def show_ingredients(self):
         self.current_menu = "Ингредиенты"
@@ -386,20 +376,23 @@ class AdminMenuScreen(MDScreen):
         self.top_app_bar_title.text = "Ингредиенты"
 
         # Очищаем контент
-        self.content_list.clear_widgets()
+        self.content_panel.clear_widgets()
+
+        content_list = MDList(
+            spacing=10,
+            padding=10,
+        )
 
         ingredients = Ingredient.get_all()
 
-        # Статистика
-        low_stock_count = sum(1 for i in ingredients if i.amount < 1)
         total_ingredients = len(ingredients)
 
-        stats_item = MDListItem(
+        header = MDListItem(
             MDListItemLeadingIcon(
-                icon="sitemap",
+                icon="account",
             ),
             MDListItemHeadlineText(
-                text="Статистика ингредиентов:",
+                text="Ингредиенты",
                 theme_text_color="Custom",
                 text_color="black",
             ),
@@ -408,17 +401,12 @@ class AdminMenuScreen(MDScreen):
                 theme_text_color="Custom",
                 text_color="black",
             ),
-            MDListItemSupportingText(
-                text=f"Заканчиваются: {low_stock_count}",
-                theme_text_color="Custom",
-                text_color="red" if low_stock_count > 0 else "gray",
-            ),
             theme_bg_color="Custom",
-            md_bg_color="pink" if low_stock_count > 0 else TOP_APP_BAR_COLOR,
-            size_hint_y=None,
-            height=dp(100)
+            md_bg_color=TOP_APP_BAR_COLOR,
+            on_release=lambda x: (),
         )
-        self.content_list.add_widget(stats_item)
+
+        self.content_panel.add_widget(header)
 
         # Список ингредиентов
         for ingredient in ingredients:
@@ -426,7 +414,7 @@ class AdminMenuScreen(MDScreen):
 
             ingredient_item = MDListItem(
                 MDListItemLeadingIcon(
-                    icon="water",
+                    icon="coffee",
                 ),
                 MDListItemHeadlineText(
                     text=ingredient.name,
@@ -434,21 +422,25 @@ class AdminMenuScreen(MDScreen):
                     text_color="black",
                 ),
                 MDListItemSupportingText(
-                    text=f"Остаток: {ingredient.amount} мл",
-                    theme_text_color="Custom",
-                    text_color="red" if is_low else "black",
-                ),
-                MDListItemSupportingText(
-                    text="⚠ ЗАКАНЧИВАЕТСЯ" if is_low else "✓ В НАЛИЧИИ",
+                    text="ЗАКАНЧИВАЕТСЯ" if is_low else "В НАЛИЧИИ",
                     theme_text_color="Custom",
                     text_color="red" if is_low else "green",
                 ),
+                MDListItemSupportingText(
+                    text=f"Остаток: {ingredient.amount} мл",
+                    theme_text_color="Custom",
+                    text_color="black",
+                ),
                 theme_bg_color="Custom",
-                md_bg_color="red" if is_low else TOP_APP_BAR_COLOR,
-                size_hint_y=None,
-                height=dp(100)
+                md_bg_color=TOP_APP_BAR_COLOR,
+                on_release=lambda x: ()
             )
-            self.content_list.add_widget(ingredient_item)
+            content_list.add_widget(ingredient_item)
+
+        scroll = MDScrollView()
+        scroll.add_widget(content_list)
+
+        self.content_panel.add_widget(scroll)
 
     def build_ui(self):
         main_layout = MDBoxLayout(

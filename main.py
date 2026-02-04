@@ -21,7 +21,7 @@ class PigBankApp(MDApp):
         self.shift.get_today_shift()
 
     def build(self):
-        Window.size = (600, 750)
+        Window.size = (500, 700)
 
         self.theme_cls.theme_style = "Light"
         self.theme_cls.primary_palette = "Pink"
@@ -41,5 +41,4 @@ class PigBankApp(MDApp):
         return screen_manager
 
 
-if __name__ == '__main__':
-    PigBankApp().run()
+PigBankApp().run()

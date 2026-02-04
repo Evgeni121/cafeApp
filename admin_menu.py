@@ -5,15 +5,17 @@ from kivymd.app import MDApp
 from kivymd.uix.appbar import MDTopAppBarTrailingButtonContainer, MDActionTopAppBarButton, MDTopAppBarTitle, \
     MDTopAppBarLeadingButtonContainer, MDTopAppBar
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.button import MDButton, MDButtonText, MDIconButton, MDFabButton
 from kivymd.uix.card import MDCard
-from kivymd.uix.dialog import MDDialogButtonContainer, MDDialogHeadlineText, MDDialog, MDDialogSupportingText
+from kivymd.uix.dialog import MDDialogButtonContainer, MDDialogHeadlineText, MDDialog, MDDialogSupportingText, \
+    MDDialogContentContainer
 from kivymd.uix.divider import MDDivider
 from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDListItemHeadlineText, MDListItem, MDList, MDListItemSupportingText, \
     MDListItemLeadingIcon
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.textfield import MDTextField, MDTextFieldHintText
 from kivymd.uix.widget import MDWidget
 
 from headers import TOP_APP_BAR_COLOR, Ingredient, Barista, SECONDARY_COLOR
@@ -32,6 +34,9 @@ class AdminMenuScreen(MDScreen):
 
         self.back_button_place = None
         self.top_app_bar_title = None
+
+        self.fab_button = None
+        self.current_menu = None
 
         self.build_ui()
 
@@ -77,7 +82,7 @@ class AdminMenuScreen(MDScreen):
     def show_main_menu(self):
         # Скрываем кнопку назад
         self.delete_back_button()
-        self.top_app_bar_title.text = "Меню"
+        self.top_app_bar_title.text = "Кафе"
 
         # Очищаем контент
         self.content_list.clear_widgets()
@@ -138,6 +143,8 @@ class AdminMenuScreen(MDScreen):
         self.show_main_menu()
 
     def show_baristas(self):
+        self.current_menu = "Бариста"
+
         self.add_back_button()
         self.top_app_bar_title.text = "Бариста"
 
@@ -177,6 +184,15 @@ class AdminMenuScreen(MDScreen):
                     theme_text_color="Custom",
                     text_color="gray",
                 ),
+                MDIconButton(
+                    icon="dots-vertical",
+                    theme_icon_color="Custom",
+                    icon_color="black",
+                    theme_bg_color="Custom",
+                    md_bg_color="white",
+                    pos_hint={"center_x": 0.5, "center_y": 0.5},
+                    on_release=lambda x: ()
+                ),
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
                 on_release=lambda x, b=barista: self.show_barista_shifts(b),
@@ -186,6 +202,8 @@ class AdminMenuScreen(MDScreen):
             self.content_list.add_widget(barista_item)
 
     def show_barista_shifts(self, barista):
+        self.current_menu = "Смены"
+
         self.top_app_bar_title.text = "Смены"
 
         # Очищаем контент
@@ -284,6 +302,15 @@ class AdminMenuScreen(MDScreen):
                     theme_text_color="Custom",
                     text_color="gray",
                 ),
+                MDIconButton(
+                    icon="dots-vertical",
+                    theme_icon_color="Custom",
+                    icon_color="black",
+                    theme_bg_color="Custom",
+                    md_bg_color="white",
+                    pos_hint={"center_x": 0.5, "center_y": 0.5},
+                    on_release=lambda x: (),
+                ),
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
                 size_hint_y=None,
@@ -292,6 +319,8 @@ class AdminMenuScreen(MDScreen):
             self.content_list.add_widget(stats_item)
 
     def show_finance(self):
+        self.current_menu = "Финансы"
+
         # Показываем кнопку назад
         self.add_back_button()
         self.top_app_bar_title.text = "Финансы"
@@ -304,6 +333,7 @@ class AdminMenuScreen(MDScreen):
             {"period": "Сегодня", "income": 15000, "expenses": 5000},
             {"period": "Неделя", "income": 85000, "expenses": 25000},
             {"period": "Месяц", "income": 320000, "expenses": 95000},
+            {"period": "Все время", "income": 500000, "expenses": 105000},
         ]
 
         for data in finance_data:
@@ -333,6 +363,15 @@ class AdminMenuScreen(MDScreen):
                     theme_text_color="Custom",
                     text_color="purple" if profit > 0 else "red",
                 ),
+                MDIconButton(
+                    icon="dots-vertical",
+                    theme_icon_color="Custom",
+                    icon_color="black",
+                    theme_bg_color="Custom",
+                    md_bg_color="white",
+                    pos_hint={"center_x": 0.5, "center_y": 0.5},
+                    on_release=lambda x: (),
+                ),
                 theme_bg_color="Custom",
                 md_bg_color=TOP_APP_BAR_COLOR,
                 size_hint_y=None,
@@ -341,6 +380,8 @@ class AdminMenuScreen(MDScreen):
             self.content_list.add_widget(finance_item)
 
     def show_ingredients(self):
+        self.current_menu = "Ингредиенты"
+
         # Показываем кнопку назад
         self.add_back_button()
         self.top_app_bar_title.text = "Ингредиенты"
@@ -416,7 +457,7 @@ class AdminMenuScreen(MDScreen):
         )
 
         content_layout = MDBoxLayout(
-            orientation="horizontal",
+            orientation="vertical",
             spacing=10,
             padding=10,
         )
@@ -424,12 +465,327 @@ class AdminMenuScreen(MDScreen):
         self.top_app_bar_init()
         self.content_panel_init()
 
+        # Создаем кнопку +
+        self.fab_button = MDFabButton(
+            icon="plus",
+            theme_bg_color="Custom",
+            md_bg_color="pink",
+            theme_text_color="Custom",
+            text_color="black",
+            pos_hint={"center_x": 0.9, "center_y": 0.1},
+            on_release=self.on_fab_click
+        )
+
         content_layout.add_widget(self.content_panel)
+        content_layout.add_widget(self.fab_button)
 
         main_layout.add_widget(self.top_app_bar)
         main_layout.add_widget(content_layout)
 
         self.add_widget(main_layout)
+
+    def on_fab_click(self, *args):
+        if self.current_menu == "Бариста":
+            self.show_add_barista_dialog()
+        elif self.current_menu == "Финансы":
+            self.show_add_finance_dialog()
+        elif self.current_menu == "Ингредиенты":
+            self.show_add_ingredient_dialog()
+        else:
+            self.show_fab_menu()
+
+    def show_fab_menu(self):
+        """Показать меню выбора при клике в главном меню"""
+        from kivymd.uix.menu import MDDropdownMenu
+
+        menu_items = [
+            {
+                "text": "Добавить бариста",
+                "leading_icon": "account-plus",
+                "on_release": self.show_add_barista_dialog
+            },
+            {
+                "text": "Добавить ингредиент",
+                "leading_icon": "water-plus",
+                "on_release": self.show_add_ingredient_dialog
+            },
+            {
+                "text": "Добавить расходы",
+                "leading_icon": "cash-plus",
+                "on_release": self.show_add_finance_dialog
+            },
+        ]
+
+        self.fab_menu = MDDropdownMenu(
+            items=menu_items,
+            caller=self.fab_button,
+        )
+        self.fab_menu.open()
+
+    def show_add_barista_dialog(self):
+        """Диалог добавления нового бариста"""
+        self.barista_name_input = MDTextField(
+            MDTextFieldHintText(
+                text="Имя",
+            ),
+            mode="outlined"
+        )
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(
+                text="Введите имя",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            MDDialogContentContainer(
+                self.barista_name_input,
+                orientation="vertical",
+            ),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
+                    style="text",
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Добавить", theme_text_color="Custom", text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.add_new_barista(dialog)
+                ),
+            ),
+            size_hint=(0.8, None),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
+        dialog.open()
+
+    def add_new_barista(self, dialog):
+        """Добавить нового бариста в БД"""
+        name = self.barista_name_input.text.strip()
+
+        if name:
+            # Добавляем в базу данных
+            barista = Barista(barista_id=0, name=name)
+            # barista.save()  # Ваш метод сохранения
+
+            # Закрываем диалог
+            dialog.dismiss()
+
+            # Обновляем список бариста
+            self.show_baristas()
+
+            # Показываем уведомление
+            from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
+            MDSnackbar(
+                MDSnackbarText(text=f"Бариста '{name}' добавлен", theme_text_color="Custom", text_color="black"),
+                y=dp(24),
+                pos_hint={"center_x": 0.5},
+                size_hint_x=0.7,
+                theme_bg_color="Primary",
+                radius=[10, 10, 10, 10],
+                duration=1,
+            ).open()
+
+    def show_add_finance_dialog(self):
+        """Диалог добавления финансовой операции"""
+        self.finance_type = "income"  # income/expense
+
+        self.finance_description = MDTextField(
+            hint_text="Описание операции",
+            mode="outlined",
+            size_hint_x=0.9
+        )
+
+        self.finance_amount = MDTextField(
+            hint_text="Сумма (BYN)",
+            mode="outlined",
+            input_filter="int",
+            size_hint_x=0.9
+        )
+
+        # Контейнер для типа операции
+        type_container = MDBoxLayout(
+            orientation="horizontal",
+            spacing=10,
+            size_hint_x=0.9
+        )
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(
+                text="Введите название и сумму",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            MDDialogContentContainer(
+                self.finance_description,
+                self.finance_amount,
+                orientation="vertical",
+                spacing=15
+            ),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
+                    style="text",
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Добавить", theme_text_color="Custom", text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.add_new_finance(dialog)
+                ),
+            ),
+            size_hint=(0.8, None),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
+        dialog.open()
+
+    def set_finance_type(self, ftype):
+        """Установить тип финансовой операции"""
+        self.finance_type = ftype
+        if ftype == "income":
+            self.income_btn.md_bg_color = "green"
+            self.expense_btn.md_bg_color = "lightgray"
+        else:
+            self.income_btn.md_bg_color = "lightgray"
+            self.expense_btn.md_bg_color = "red"
+
+    def add_new_finance(self, dialog):
+        """Добавить финансовую операцию"""
+        description = self.finance_description.text.strip()
+        amount = self.finance_amount.text.strip()
+
+        if description and amount:
+            try:
+                # Здесь ваша логика сохранения в БД
+                amount_int = int(amount)
+                print(f"Добавляем {self.finance_type}: {description} - {amount_int} BYN")
+
+                dialog.dismiss()
+                self.show_finance()  # Обновляем список
+
+                # Уведомление
+                from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
+                MDSnackbar(
+                    MDSnackbarText(
+                        text=f"Операция '{description}' добавлена",
+                        theme_text_color="Custom",
+                        text_color="black"
+                    ),
+                    y=dp(24),
+                    pos_hint={"center_x": 0.5},
+                    size_hint_x=0.7,
+                    theme_bg_color="Primary",
+                    radius=[10, 10, 10, 10],
+                    duration=1,
+                ).open()
+
+            except ValueError:
+                print("Ошибка: сумма должна быть числом")
+
+    def show_add_ingredient_dialog(self):
+        """Диалог добавления нового ингредиента"""
+        self.ingredient_name = MDTextField(
+            hint_text="Название ингредиента",
+            mode="outlined",
+            size_hint_x=0.9
+        )
+
+        self.ingredient_quantity = MDTextField(
+            hint_text="Количество (мл)",
+            mode="outlined",
+            input_filter="int",
+            size_hint_x=0.9
+        )
+
+        self.ingredient_min_quantity = MDTextField(
+            hint_text="Минимальный запас (мл)",
+            mode="outlined",
+            input_filter="int",
+            size_hint_x=0.9
+        )
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(
+                text="Введите параметры ингредиента",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            MDDialogContentContainer(
+                self.ingredient_name,
+                self.ingredient_quantity,
+                self.ingredient_min_quantity,
+                orientation="vertical",
+                spacing=15
+            ),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
+                    style="text",
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Добавить", theme_text_color="Custom", text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.add_new_ingredient(dialog)
+                ),
+            ),
+            size_hint=(0.8, None),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
+        dialog.open()
+
+    def add_new_ingredient(self, dialog):
+        """Добавить новый ингредиент"""
+        name = self.ingredient_name.text.strip()
+        quantity = self.ingredient_quantity.text.strip()
+        min_quantity = self.ingredient_min_quantity.text.strip()
+
+        if name and quantity:
+            try:
+                quantity_int = int(quantity)
+                min_quantity_int = int(min_quantity) if min_quantity else 0
+
+                # Здесь ваша логика сохранения в БД
+                # ingredient = Ingredient(name=name, amount=quantity_int, min_amount=min_quantity_int)
+                # ingredient.save()
+
+                print(f"Добавляем ингредиент: {name} - {quantity_int} мл")
+
+                dialog.dismiss()
+                self.show_ingredients()  # Обновляем список
+
+                # Уведомление
+                from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
+                MDSnackbar(
+                    MDSnackbarText(
+                        text=f"Ингредиент '{name}' добавлен",
+                        theme_text_color="Custom",
+                        text_color="black"
+                    ),
+                    y=dp(24),
+                    pos_hint={"center_x": 0.5},
+                    size_hint_x=0.7,
+                    theme_bg_color="Primary",
+                    radius=[10, 10, 10, 10],
+                    duration=1,
+                ).open()
+
+            except ValueError:
+                print("Ошибка: количество должно быть числом")
 
     def show_close_dialog(self, *args):
         dialog = MDDialog(

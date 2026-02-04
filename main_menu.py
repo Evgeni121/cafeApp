@@ -865,7 +865,7 @@ class MainMenuScreen(MDScreen):
                     icon_color="black",
                     theme_bg_color="Custom",
                     md_bg_color="white",
-                    pos_hint={"center_x": 0.5, "center_y": 0.7},
+                    pos_hint={"center_x": 0.5, "center_y": 0.5},
                     on_release=lambda x, o=order: self.show_order_menu(x, o)
                 ),
                 divider=True,

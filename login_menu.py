@@ -125,6 +125,7 @@ class LoginMenuScreen(MDScreen):
             MDTextFieldHintText(
                 text="Пароль",
             ),
+            text="123",
             mode="outlined",
             password=True,
         )
@@ -170,7 +171,7 @@ class LoginMenuScreen(MDScreen):
         password = self.password_field.text
 
         # Ваша логика проверки
-        if login == "admin" and password == "admin321":
+        if login == "admin" and password == "123":
             text = "Авторизация прошла успешно"
             self.auth_dialog.dismiss()
             self.go_to_admin_menu()

@@ -203,7 +203,6 @@ class AdminMenuScreen(MDScreen):
 
     def show_barista_shifts(self, barista):
         self.current_menu = "Смены"
-
         self.top_app_bar_title.text = "Смены"
 
         # Очищаем контент
@@ -223,7 +222,7 @@ class AdminMenuScreen(MDScreen):
                 text_color="black",
             ),
             MDListItemSupportingText(
-                text="История смен",
+                text="Смены",
                 theme_text_color="Custom",
                 text_color="gray",
             ),

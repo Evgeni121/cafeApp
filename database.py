@@ -154,8 +154,8 @@ class DataBase:
                 drink_table.c.id,
                 drink_table.c.category_id,
                 drink_table.c.name,
-                drink_table.c.price,
                 drink_table.c.size,
+                drink_table.c.price,
                 drink_table.c.calories,
             )
                     .select_from(
@@ -404,3 +404,7 @@ class DataBase:
 
             result = session.execute(stmt)
             return result.fetchall()
+
+    @classmethod
+    def add_barista(cls, name, cafe_id=CAFE_ID):
+        pass

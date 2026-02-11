@@ -33,19 +33,15 @@ class Category:
 
 
 class Drink:
-    def __init__(self, drink_id, category_id, name, prices, sizes, calories, sizes_label=None, volume=None):
+    def __init__(self, drink_id, category_id, name, sizes, volume=None):
         self._drink_id = drink_id
         self._name = name
         self._sizes = sizes
-        self._prices = prices
         self._category_id = category_id
-        self._calories = calories
 
         self._size_unit = "мл" if volume else "г"
-        self._sizes_label = sizes_label
 
-        self._selected_size = self._sizes[0]
-        self._selected_price = self._prices[0]
+        self._selected_size = None
 
     @property
     def drink_id(self):
@@ -60,14 +56,6 @@ class Drink:
         return self._sizes
 
     @property
-    def sizes_label(self):
-        return self._sizes_label
-
-    @property
-    def prices(self):
-        return self._prices
-
-    @property
     def size_unit(self):
         return self._size_unit
 
@@ -77,19 +65,14 @@ class Drink:
 
     @property
     def selected_size(self):
+        if not self._selected_size:
+            self._selected_size = sorted(list(self.sizes))[0]
+
         return self._selected_size
 
     @selected_size.setter
     def selected_size(self, selected_size):
         self._selected_size = selected_size
-
-    @property
-    def selected_price(self):
-        return self._selected_price
-
-    @selected_price.setter
-    def selected_price(self, selected_price):
-        self._selected_price = selected_price
 
 
 class Menu:
@@ -118,17 +101,14 @@ class Menu:
                 drink = next((drink for drink in self.drinks if drink.name == drink_db[2]), None)
 
                 if drink:
-                    drink._sizes.append(drink_db[4])
-                    drink._prices.append(drink_db[3])
-                    drink._calories.append(drink_db[5])
+                    drink._sizes[drink_db[3]] = {"price": drink_db[4], "calories": drink_db[5], "label": "L"}
                 else:
-                    self.drinks.append(
-                        Drink(drink_db[0], drink_db[1], drink_db[2], [drink_db[3]], [drink_db[4]], [drink_db[5]],
-                              sizes_label=["M", "L"], volume=not drink_db[1] == cat.category_id))
+                    sizes = {drink_db[3]: {"price": drink_db[4], "calories": drink_db[5], "label": "M"}}
+                    self.drinks.append(Drink(drink_db[0], drink_db[1], drink_db[2], sizes, volume=not drink_db[1] == cat.category_id))
 
 
 class Barista:
-    def __init__(self, barista_id, name):
+    def __init__(self, barista_id=None, name=None):
         self._barista_id = barista_id
         self._name = name
 
@@ -168,12 +148,11 @@ class Barista:
 
         return baristas
 
-
-BARISTAS = [
-    Barista(1, "Дашка"),
-    Barista(2, "Кристина"),
-    Barista(3, "Грета"),
-]
+    @classmethod
+    def create(cls, name) -> Self:
+        barista_bd = database.add_barista(name)
+        if barista_bd:
+            return Barista(barista_id=barista_bd[0], name=barista_bd[1])
 
 
 class CartItem:
@@ -185,7 +164,7 @@ class CartItem:
         self.size = size
         self.size_unit = product.size_unit
 
-        self.price = product.prices[product.sizes.index(size)]
+        self.price = product.sizes.get(size).get("price")
 
         self.quantity = quantity
 
@@ -264,11 +243,11 @@ class Order:
             self.drink_amount = 0
 
             for item in items_db:
+                sizes = {item[3]: {"price": item[4], "calories": item[5], "label": "M"}}
                 self.add_item(
                     CartItem(
                         product=Drink(drink_id=item[0], category_id=item[1], name=item[2],
-                                      prices=[item[3]], sizes=[item[4]], calories=[item[5]],
-                                      sizes_label=None, volume=category.category_id != item[1]),
+                                      sizes=sizes, volume=category.category_id != item[1]),
                         size=item[4],
                         quantity=item[6]
                     )

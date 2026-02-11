@@ -136,7 +136,7 @@ class MainMenuScreen(MDScreen):
     def categories_panel_init(self):
         self.categories_panel = MDBoxLayout(
             orientation="vertical",
-            size_hint=(0.25, 1.0),
+            size_hint=(0.3, 1.0),
             padding=[10, 10, 10, 5],
             # spacing=5,
             radius=[10, 10, 10, 10],
@@ -181,7 +181,7 @@ class MainMenuScreen(MDScreen):
                     text_color="black",
                     font_style="Title",
                     role="small",
-                    bold=False
+                    bold=False,
                 ),
                 id=category.name,
                 divider=True,
@@ -190,7 +190,7 @@ class MainMenuScreen(MDScreen):
                 md_bg_color="pink" if category == self.selected_category else TOP_APP_BAR_COLOR,
                 on_release=lambda x, cat=category: self.select_category(cat),
                 size_hint_y=None,
-                height="60dp",
+                height="50dp",
                 radius=[5, 5, 5, 5]
             )
 
@@ -229,14 +229,14 @@ class MainMenuScreen(MDScreen):
 
             card_layout = MDRelativeLayout()
             card.add_widget(card_layout)
-
+            #
             # # Добавь картинку в начало card_layout
             # product_image = FitImage(
-            #     source=f"images/drinks/{20}.jpg",
-            #     size_hint=(0.5, None),
-            #     height=120,
+            #     source=f"assets/images/cappuccino.jpg",
+            #     # size_hint=(None, 1.0),
+            #     # height=100,
             #     radius=[10, 10, 10, 10],
-            #     pos_hint={"center_x": 0.3, "center_y": 0.1}
+            #     pos_hint={"center_x": 0.5, "center_y": 0.1}
             # )
             # card_layout.add_widget(product_image)
 
@@ -261,7 +261,7 @@ class MainMenuScreen(MDScreen):
 
             # Цена продукта - используем метод display_price
             price_label = MDLabel(
-                text=f"{product.selected_price} BYN",
+                text=f"{product.sizes.get(product.selected_size).get("price")} BYN",
                 halign="right",
                 padding=10,
                 theme_text_color="Custom",
@@ -297,10 +297,12 @@ class MainMenuScreen(MDScreen):
                 )
 
                 for i in range(len_sizes):
+                    sizes = sorted(list(product.sizes.keys()))
+
                     size_button.add_widget(
                         MDSegmentedButtonItem(
                             MDSegmentButtonLabel(
-                                text=f"{product.sizes_label[i]}",
+                                text=f"{sizes[i]}",
                                 # theme_text_color="Custom",
                                 # text_color="black",
                                 theme_font_size="Custom",
@@ -308,25 +310,9 @@ class MainMenuScreen(MDScreen):
                             ),
                             active=i == 0,
                             selected_color="pink",
-                            on_release=lambda x, p=product, n=i: self.select_size(x, p, n)
+                            on_release=lambda x, p=product, s=sizes[i]: self.select_size(x, p, s)
                         )
                     )
-
-                    # size_button = MDSegmentedButton(
-                    #     MDButtonText(
-                    #         text=f"{product.sizes_label[i]}",
-                    #         theme_text_color="Custom",
-                    #         text_color="black",
-                    #         theme_font_size="Custom",
-                    #         font_size="15sp",
-                    #     ),
-                    #     size_hint=(None, None),
-                    #     size=(dp(30), dp(30)),
-                    #     theme_bg_color="Custom",
-                    #     md_bg_color="pink" if i == 0 else "white",
-                    # )
-                    #
-                    # size_button.bind(on_release=lambda x, p=product, n=i: self.select_size(x, p, n))
 
                 size_container.add_widget(size_button)
 
@@ -336,7 +322,7 @@ class MainMenuScreen(MDScreen):
             buttons_container = MDBoxLayout(
                 orientation="horizontal",
                 padding=[0, 0, 0, 5],
-                size_hint_x=0.3
+                size_hint_x=0.4
             )
 
             # Кнопка уменьшения количества
@@ -401,7 +387,7 @@ class MainMenuScreen(MDScreen):
     def products_panel_init(self):
         self.products_panel = MDBoxLayout(
             orientation="vertical",
-            size_hint=(0.75, 1.0),
+            size_hint=(0.7, 1.0),
             padding=[10, 10, 5, 5],
             spacing=10,
             radius=[10, 10, 10, 10],
@@ -504,20 +490,14 @@ class MainMenuScreen(MDScreen):
         self.categories_panel_list_update()
         self.products_panel_list_update()
 
-    def select_size(self, button, product, size_num):
-        # for btn in button.parent.children:
-        #     btn.md_bg_color = "white"
-        #
-        # button.md_bg_color = "pink"
-
-        # Сохраняем выбранный размер для продукта
-        product.selected_size = product.sizes[size_num]
-        product.selected_price = product.prices[size_num]
+    def select_size(self, button, product, size):
+        product.selected_size = size
+        selected_price = product.sizes.get(size).get("price")
 
         button.parent.parent.parent.parent.parent.children[1].children[0].children[
             1].text = f"{product.name} {product.selected_size} {product.size_unit}"
         button.parent.parent.parent.parent.parent.children[1].children[0].children[
-            0].text = f"{product.selected_price} BYN"
+            0].text = f"{selected_price} BYN"
 
     # Метод добавления в корзину
     def add_to_cart(self, product, size=None):

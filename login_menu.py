@@ -1,4 +1,5 @@
 from kivy.uix.image import Image
+from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDButton, MDButtonText, MDButtonIcon
 from kivymd.uix.label import MDLabel
@@ -193,7 +194,12 @@ class LoginMenuScreen(MDScreen):
         ).open()
 
     def go_to_barista_menu(self, *args):
-        self.manager.current = "barista_menu"
+        app = MDApp.get_running_app()
+
+        if app.shift.is_active:
+            self.manager.current = "main_menu"
+        else:
+            self.manager.current = "barista_menu"
 
     def go_to_admin_menu(self, *args):
         self.manager.current = "admin_menu"

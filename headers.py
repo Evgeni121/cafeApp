@@ -33,15 +33,17 @@ class Category:
 
 
 class Drink:
-    def __init__(self, drink_id, category_id, name, sizes, volume=None):
+    def __init__(self, drink_id, category_id, name, size, price, calories, volume=None):
         self._drink_id = drink_id
         self._name = name
-        self._sizes = sizes
         self._category_id = category_id
+        self._size = size
+        self._price = price
+        self._calories = calories
 
         self._size_unit = "мл" if volume else "г"
 
-        self._selected_size = None
+        self.ingredients: [DrinkIngredient] = []
 
     @property
     def drink_id(self):
@@ -52,59 +54,106 @@ class Drink:
         return self._name
 
     @property
-    def sizes(self):
-        return self._sizes
+    def size(self):
+        return self._size
 
     @property
-    def size_unit(self):
-        return self._size_unit
+    def price(self):
+        return self._price
+
+    @property
+    def calories(self):
+        return self._calories
 
     @property
     def category_id(self):
         return self._category_id
 
     @property
-    def selected_size(self):
-        if not self._selected_size:
-            self._selected_size = sorted(list(self.sizes))[0]
+    def size_unit(self):
+        return self._size_unit
 
-        return self._selected_size
 
-    @selected_size.setter
-    def selected_size(self, selected_size):
-        self._selected_size = selected_size
+class MenuDrink:
+    def __init__(self, drinks: [Drink], category_id, name):
+        self._drinks: [Drink] = drinks
+
+        self._category_id = category_id
+        self._name = name
+
+        self._selected_drink = None
+
+    @property
+    def drink_id(self):
+        return self.selected_drink.drink_id
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def category_id(self):
+        return self._category_id
+
+    @property
+    def drinks(self):
+        return self._drinks
+
+    @property
+    def selected_drink(self):
+        if not self._selected_drink:
+            self._selected_drink = sorted(self._drinks, key=lambda x: x.size)[0]
+
+        return self._selected_drink
+
+    @selected_drink.setter
+    def selected_drink(self, selected_drink: Drink):
+        self._selected_drink = selected_drink
+
+    def add_drink(self, drink: Drink):
+        self._drinks.append(drink)
 
 
 class Menu:
     def __init__(self):
-        self.categories: [Category] = None
+        self._categories: [Category] = None
 
-        self.drinks: [Drink] = None
+        self._menu_drinks: [MenuDrink] = None
 
         self.get_categories()
         self.get_drinks()
 
+    @property
+    def categories(self):
+        return self._categories
+
+    @property
+    def menu_drinks(self):
+        return self._menu_drinks
+
     def get_categories(self):
         categories_db = database.get_categories()
         if categories_db:
-            self.categories = [Category(category[0], category[1]) for category in categories_db]
+            self._categories = [Category(category[0], category[1]) for category in categories_db]
 
     def get_drinks(self):
         drinks_db = database.get_drinks()
 
         if drinks_db:
-            self.drinks = []
+            self._menu_drinks = []
 
             cat = next((cat for cat in self.categories if cat.name == "Десерты"), None)
 
             for drink_db in drinks_db:
-                drink = next((drink for drink in self.drinks if drink.name == drink_db[2]), None)
+                menu_drink = next((drink for drink in self.menu_drinks if drink.name == drink_db[2]), None)
 
-                if drink:
-                    drink._sizes[drink_db[3]] = {"price": drink_db[4], "calories": drink_db[5], "label": "L"}
+                drink = Drink(drink_db[0], drink_db[1], drink_db[2], drink_db[3], drink_db[4], drink_db[5],
+                              volume=not drink_db[1] == cat.category_id)
+
+                if menu_drink:
+                    menu_drink.add_drink(drink)
                 else:
-                    sizes = {drink_db[3]: {"price": drink_db[4], "calories": drink_db[5], "label": "M"}}
-                    self.drinks.append(Drink(drink_db[0], drink_db[1], drink_db[2], sizes, volume=not drink_db[1] == cat.category_id))
+                    self.menu_drinks.append(MenuDrink([drink], drink_db[1], drink_db[2]))
 
 
 class Barista:
@@ -118,25 +167,13 @@ class Barista:
     def barista_id(self):
         return self._barista_id
 
-    @barista_id.setter
-    def barista_id(self, barista_id):
-        self._barista_id = barista_id
-
     @property
     def name(self):
         return self._name
 
-    @name.setter
-    def name(self, name):
-        self._name = name
-
     @property
     def is_admin(self):
         return self._is_admin
-
-    @is_admin.setter
-    def is_admin(self, is_admin):
-        self._is_admin = is_admin
 
     @classmethod
     def get_all_baristas(cls) -> [Self]:
@@ -156,77 +193,98 @@ class Barista:
 
 
 class CartItem:
-    """Элемент корзины"""
-
-    def __init__(self, product, size, quantity=1):
-        self.product = product
-        self.name = product.name
-        self.size = size
-        self.size_unit = product.size_unit
-
-        self.price = product.sizes.get(size).get("price")
-
-        self.quantity = quantity
+    def __init__(self, drink: Drink, quantity=1):
+        self._drink: Drink = drink
+        self._quantity = quantity
 
     @property
-    def total(self):
-        return self.price * self.quantity
+    def drink(self):
+        return self._drink
+
+    @property
+    def quantity(self):
+        return self._quantity
+
+    @quantity.setter
+    def quantity(self, val):
+        self._quantity = val
+
+    @property
+    def total_price(self):
+        return self._drink.price * self._quantity
 
 
 class Cart:
     def __init__(self):
-        self.cart_items: [CartItem] = []
+        self._cart_items: [CartItem] = []
 
-    def add(self, product: Drink, size):
-        cart_item = next((cart_item for cart_item in self.cart_items if
-                          cart_item.product.drink_id == product.drink_id and
-                          cart_item.size == size), None)
+    @property
+    def cart_items(self):
+        return self._cart_items
+
+    def add_drink(self, drink: Drink):
+        cart_item = next((cart_item for cart_item in self._cart_items if cart_item.drink.drink_id == drink.drink_id), None)
 
         if cart_item:
             cart_item.quantity += 1
         else:
-            self.cart_items.append(CartItem(product, size))
+            self._cart_items.append(CartItem(drink))
 
-    def pop(self, product: Drink, size):
-        cart_item = next((cart_item for cart_item in self.cart_items if
-                          cart_item.product.drink_id == product.drink_id and
-                          size == cart_item.size), None)
+    def pop_drink(self, drink: Drink):
+        cart_item = next((cart_item for cart_item in self._cart_items if cart_item.drink.drink_id == drink.drink_id), None)
 
         if cart_item:
             if cart_item.quantity > 1:
                 cart_item.quantity -= 1
             else:
-                self.cart_items.remove(cart_item)
+                self._cart_items.remove(cart_item)
 
     @property
-    def total(self):
-        return sum(lambda x: item.total for item in self.cart_items)
+    def total_price(self):
+        return sum(lambda x: item.total_price for item in self._cart_items)
 
     def clear(self):
-        self.cart_items.clear()
+        self._cart_items.clear()
 
 
 class Order:
-    """Заказ"""
-
     def __init__(self, order_id=None, shift_id=None, total_price=0, drink_amount=0, created_at=None):
-        self.order_id = order_id
-
-        self.shift_id = shift_id
+        self._order_id = order_id
+        self._shift_id = shift_id
 
         self._items: [CartItem] = []
 
         time = created_at or datetime.now()
-        self.created_at = time.strftime("%H:%M:%S")
+        self._created_at = time.strftime("%H:%M:%S")
 
-        self.total_price = total_price
-        self.drink_amount = drink_amount
+        self._total_price = total_price
+        self._drink_amount = drink_amount
+
+    @property
+    def order_id(self):
+        return self._order_id
+
+    @order_id.setter
+    def order_id(self, order_id):
+        self._order_id = order_id
+
+    @property
+    def total_price(self):
+        return self._total_price
+
+    @property
+    def created_at(self):
+        return self._created_at
+
+    @property
+    def drink_amount(self):
+        return self._drink_amount
 
     def add_item(self, cart_item: CartItem):
         self._items.append(cart_item)
 
-        self.total_price += cart_item.total
-        self.drink_amount += cart_item.quantity
+        self._total_price += cart_item.total_price
+        self._drink_amount += cart_item.quantity
 
     @property
     def items(self):
@@ -236,22 +294,17 @@ class Order:
         return self._items
 
     def get_items(self):
-        items_db = database.get_items(self.order_id)
+        items_db = database.get_items(self._order_id)
         if items_db:
-            category = Category.get_by_name("Десерты")
-            self.total_price = 0
-            self.drink_amount = 0
+            cat = Category.get_by_name("Десерты")
+            self._total_price = 0
+            self._drink_amount = 0
 
             for item in items_db:
-                sizes = {item[3]: {"price": item[4], "calories": item[5], "label": "M"}}
-                self.add_item(
-                    CartItem(
-                        product=Drink(drink_id=item[0], category_id=item[1], name=item[2],
-                                      sizes=sizes, volume=category.category_id != item[1]),
-                        size=item[4],
-                        quantity=item[6]
-                    )
-                )
+                drink = Drink(item[0], item[1], item[2], item[3], item[4], item[5],
+                              volume=not item[1] == cat.category_id)
+
+                self.add_item(CartItem(drink, quantity=item[6]))
 
 
 class Shift:
@@ -405,3 +458,10 @@ class Ingredient:
     @property
     def amount(self):
         return self._amount
+
+
+class DrinkIngredient:
+    def __init__(self, drink_id, ingredient_id, amount):
+        self._drink_id = drink_id
+        self._ingredient_id = ingredient_id
+        self._amount = amount

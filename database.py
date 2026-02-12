@@ -291,7 +291,7 @@ class DataBase:
             for item in order.items:
                 stmt_order_drink = order_drink_table.insert().values(
                     order_id=order_id,
-                    drink_id=item.product.drink_id,
+                    drink_id=item.drink.drink_id,
                     amount=item.quantity
                 )
                 session.execute(stmt_order_drink)
@@ -341,8 +341,8 @@ class DataBase:
                 drink_table.c.id,
                 drink_table.c.category_id,
                 drink_table.c.name,
-                drink_table.c.price,
                 drink_table.c.size,
+                drink_table.c.price,
                 drink_table.c.calories,
                 order_drink_table.c.amount,
             )

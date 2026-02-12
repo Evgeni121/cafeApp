@@ -23,7 +23,7 @@ from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
 from headers import Order, Barista, SECONDARY_COLOR, TOP_APP_BAR_COLOR, FOURTH_COLOR, Category, \
-    THIRD_COLOR, Shift
+    THIRD_COLOR, Shift, Drink, MenuDrink
 
 
 class MainMenuScreen(MDScreen):
@@ -38,10 +38,10 @@ class MainMenuScreen(MDScreen):
         self.categories_panel = None
         self.categories_list = None
 
-        self.products_panel = None
-        self.products_label = None
-        self.product_card_quantity_labels = {}
-        self.products_list = None
+        self.menu_drinks_panel = None
+        self.menu_drinks_label = None
+        self.menu_drink_card_quantity_labels = {}
+        self.menu_drinks_list = None
         self.cart_button = None
         self.cart_list = None
 
@@ -202,16 +202,16 @@ class MainMenuScreen(MDScreen):
             #     )
             # )
 
-    def products_panel_list_update(self):
+    def menu_drinks_panel_list_update(self):
         app = MDApp.get_running_app()
 
-        self.products_list.clear_widgets()
-        self.products_list.parent.scroll_y = 1.0
+        self.menu_drinks_list.clear_widgets()
+        self.menu_drinks_list.parent.scroll_y = 1.0
 
-        products = sorted([p for p in app.menu.drinks if p.category_id == self.selected_category.category_id],
+        menu_drinks = sorted([p for p in app.menu.menu_drinks if p.category_id == self.selected_category.category_id],
                           key=lambda x: x.name)
 
-        for product in products:
+        for menu_drink in menu_drinks:
             card = MDCard(
                 orientation="vertical",
                 size_hint=(1, None),
@@ -231,14 +231,14 @@ class MainMenuScreen(MDScreen):
             card.add_widget(card_layout)
             #
             # # Добавь картинку в начало card_layout
-            # product_image = FitImage(
+            # menu_drink_image = FitImage(
             #     source=f"assets/images/cappuccino.jpg",
             #     # size_hint=(None, 1.0),
             #     # height=100,
             #     radius=[10, 10, 10, 10],
             #     pos_hint={"center_x": 0.5, "center_y": 0.1}
             # )
-            # card_layout.add_widget(product_image)
+            # card_layout.add_widget(menu_drink_image)
 
             # Верхняя строка: название и цена
             top_row = MDBoxLayout(
@@ -249,8 +249,8 @@ class MainMenuScreen(MDScreen):
             )
 
             # Название продукта
-            product_name_label = MDLabel(
-                text=f"{product.name} {product.selected_size} {product.size_unit}",
+            menu_drink_name_label = MDLabel(
+                text=f"{menu_drink.name} {menu_drink.selected_drink.size} {menu_drink.selected_drink.size_unit}",
                 halign="left",
                 font_style="Title",
                 role="medium",
@@ -259,9 +259,8 @@ class MainMenuScreen(MDScreen):
                 size_hint_x=0.7,
             )
 
-            # Цена продукта - используем метод display_price
             price_label = MDLabel(
-                text=f"{product.sizes.get(product.selected_size).get("price")} BYN",
+                text=f"{menu_drink.selected_drink.price} BYN",
                 halign="right",
                 padding=10,
                 theme_text_color="Custom",
@@ -270,7 +269,7 @@ class MainMenuScreen(MDScreen):
                 bold=True
             )
 
-            top_row.add_widget(product_name_label)
+            top_row.add_widget(menu_drink_name_label)
             top_row.add_widget(price_label)
             card_layout.add_widget(top_row)
 
@@ -290,27 +289,26 @@ class MainMenuScreen(MDScreen):
                 size_hint_x=0.6,
             )
 
-            len_sizes = len(product.sizes)
-            if len_sizes > 1:
+            drink_amount = len(menu_drink.drinks)
+            if drink_amount > 1:
                 size_button = MDSegmentedButton(
                     type="small",
                 )
 
-                for i in range(len_sizes):
-                    sizes = sorted(list(product.sizes.keys()))
-
+                drinks = sorted(menu_drink.drinks, key=lambda x: x.size)
+                for drink in drinks:
                     size_button.add_widget(
                         MDSegmentedButtonItem(
                             MDSegmentButtonLabel(
-                                text=f"{sizes[i]}",
+                                text=f"{drink.size}",
                                 # theme_text_color="Custom",
                                 # text_color="black",
                                 theme_font_size="Custom",
                                 font_size="15sp",
                             ),
-                            active=i == 0,
+                            active=drink == drinks[0],
                             selected_color="pink",
-                            on_release=lambda x, p=product, s=sizes[i]: self.select_size(x, p, s)
+                            on_release=lambda x, p=menu_drink, d=drink: self.select_drink(x, p, d)
                         )
                     )
 
@@ -335,14 +333,14 @@ class MainMenuScreen(MDScreen):
                 theme_font_size="Custom",
                 font_size="16sp",
             )
-            pop_button.bind(on_release=lambda x, p=product: self.pop_from_cart(p))
+            pop_button.bind(on_release=lambda x, d=menu_drink: self.pop_from_cart(menu_drink=d))
 
-            product_amount = sum(
-                item.quantity for item in app.cart.cart_items if item.product.drink_id == product.drink_id)
+            menu_drink_amount = sum(
+                item.quantity for item in app.cart.cart_items if item.drink.drink_id == menu_drink.drink_id)
 
             # Поле для отображения количества в корзине
             quantity_label = MDLabel(
-                text=str(product_amount),
+                text=str(menu_drink_amount),
                 theme_text_color="Custom",
                 text_color="black",
                 halign="center",
@@ -350,7 +348,7 @@ class MainMenuScreen(MDScreen):
                 size_hint_y=1.0,
             )
 
-            self.product_card_quantity_labels[product.drink_id] = quantity_label
+            self.menu_drink_card_quantity_labels[menu_drink.name] = quantity_label
 
             # Кнопка увеличения количества
             add_button = MDIconButton(
@@ -364,7 +362,7 @@ class MainMenuScreen(MDScreen):
                 size_hint=(None, None),
                 size=("50dp", "50dp"),
             )
-            add_button.bind(on_release=lambda x, p=product: self.add_to_cart(p))
+            add_button.bind(on_release=lambda x, d=menu_drink: self.add_to_cart(menu_drink=d))
 
             buttons_container.add_widget(pop_button)
             buttons_container.add_widget(quantity_label)
@@ -382,10 +380,10 @@ class MainMenuScreen(MDScreen):
 
             card_container.add_widget(card)
 
-            self.products_list.add_widget(card_container)
+            self.menu_drinks_list.add_widget(card_container)
 
-    def products_panel_init(self):
-        self.products_panel = MDBoxLayout(
+    def menu_drinks_panel_init(self):
+        self.menu_drinks_panel = MDBoxLayout(
             orientation="vertical",
             size_hint=(0.7, 1.0),
             padding=[10, 10, 5, 5],
@@ -396,7 +394,7 @@ class MainMenuScreen(MDScreen):
             md_bg_color=TOP_APP_BAR_COLOR
         )
 
-        self.products_label = MDLabel(
+        self.menu_drinks_label = MDLabel(
             text="Кофе",
             halign="left",
             theme_text_color="Custom",
@@ -407,7 +405,7 @@ class MainMenuScreen(MDScreen):
             bold=True
         )
 
-        self.products_list = MDList(
+        self.menu_drinks_list = MDList(
             spacing=10,
             padding=5,
             size_hint=(0.95, 1),
@@ -444,20 +442,20 @@ class MainMenuScreen(MDScreen):
             on_release=self.show_cart
         )
 
-        products_scroll = MDScrollView()
-        products_scroll.add_widget(self.products_list)
+        menu_drinks_scroll = MDScrollView()
+        menu_drinks_scroll.add_widget(self.menu_drinks_list)
 
-        self.products_panel.add_widget(self.products_label)
-        # self.products_panel.add_widget(
+        self.menu_drinks_panel.add_widget(self.menu_drinks_label)
+        # self.menu_drinks_panel.add_widget(
         #     MDDivider(
         #         theme_divider_color="Custom",
         #         color=SECONDARY_COLOR
         #     )
         # )
-        self.products_panel.add_widget(products_scroll)
-        self.products_panel.add_widget(self.cart_button)
+        self.menu_drinks_panel.add_widget(menu_drinks_scroll)
+        self.menu_drinks_panel.add_widget(self.cart_button)
 
-        self.products_panel_list_update()
+        self.menu_drinks_panel_list_update()
 
     def build_ui(self):
         main_layout = MDBoxLayout(
@@ -472,10 +470,10 @@ class MainMenuScreen(MDScreen):
 
         self.top_app_bar_init()
         self.categories_panel_init()
-        self.products_panel_init()
+        self.menu_drinks_panel_init()
 
         content_layout.add_widget(self.categories_panel)
-        content_layout.add_widget(self.products_panel)
+        content_layout.add_widget(self.menu_drinks_panel)
 
         main_layout.add_widget(self.top_app_bar)
         main_layout.add_widget(content_layout)
@@ -485,39 +483,44 @@ class MainMenuScreen(MDScreen):
     def select_category(self, category: Category):
         self.selected_category = category
 
-        self.products_label.text = self.selected_category.name
+        self.menu_drinks_label.text = self.selected_category.name
 
         self.categories_panel_list_update()
-        self.products_panel_list_update()
+        self.menu_drinks_panel_list_update()
 
-    def select_size(self, button, product, size):
-        product.selected_size = size
-        selected_price = product.sizes.get(size).get("price")
+    def select_drink(self, button, menu_drink: MenuDrink, drink: Drink):
+        menu_drink.selected_drink = drink
 
         button.parent.parent.parent.parent.parent.children[1].children[0].children[
-            1].text = f"{product.name} {product.selected_size} {product.size_unit}"
+            1].text = f"{menu_drink.name} {drink.size} {drink.size_unit}"
         button.parent.parent.parent.parent.parent.children[1].children[0].children[
-            0].text = f"{selected_price} BYN"
+            0].text = f"{drink.price} BYN"
 
     # Метод добавления в корзину
-    def add_to_cart(self, product, size=None):
+    def add_to_cart(self, menu_drink: MenuDrink = None, drink: Drink = None):
         app = MDApp.get_running_app()
 
-        app.cart.add(product, size or product.selected_size)
+        drink = menu_drink.selected_drink if menu_drink else drink
 
-        self.update_cart_counter()
-        self.update_card_counter(product.drink_id)
-        self.cart_items_update()
+        if drink:
+            app.cart.add_drink(drink)
+
+            self.update_cart_counter()
+            self.update_card_counter(drink.name)
+            self.cart_items_update()
 
     # Метод удаления из корзины
-    def pop_from_cart(self, product, size=None):
+    def pop_from_cart(self, menu_drink: MenuDrink = None, drink: Drink = None):
         app = MDApp.get_running_app()
 
-        app.cart.pop(product, size or product.selected_size)
+        drink = menu_drink.selected_drink if menu_drink else drink
 
-        self.update_cart_counter()
-        self.update_card_counter(product.drink_id)
-        self.cart_items_update()
+        if drink:
+            app.cart.pop_drink(drink)
+
+            self.update_cart_counter()
+            self.update_card_counter(drink.name)
+            self.cart_items_update()
 
     # Вспомогательный метод для форматирования отображения размера
     def format_size_display(self, size):
@@ -531,26 +534,25 @@ class MainMenuScreen(MDScreen):
             else:
                 return f"{size / 1000:.1f}л"
 
-    def update_card_counter(self, drink_id):
+    def update_card_counter(self, drink_name):
         app = MDApp.get_running_app()
 
-        product_amount = sum(item.quantity for item in app.cart.cart_items if item.product.drink_id == drink_id)
-        card_quantity_label = self.product_card_quantity_labels.get(drink_id)
+        menu_drink_amount = sum(item.quantity for item in app.cart.cart_items if item.drink.name == drink_name)
+        card_quantity_label = self.menu_drink_card_quantity_labels.get(drink_name)
         if card_quantity_label and isinstance(card_quantity_label, MDLabel):
-            card_quantity_label.text = str(product_amount)
+            card_quantity_label.text = str(menu_drink_amount)
 
     def reset_card_counter(self):
-        for val in self.product_card_quantity_labels.values():
+        for val in self.menu_drink_card_quantity_labels.values():
             val.text = "0"
 
     def update_cart_counter(self):
         app = MDApp.get_running_app()
 
-        if hasattr(self, 'cart_button'):
-            for child in self.cart_button.children:
-                if isinstance(child, MDButtonText):
-                    child.text = f"{(sum(item.total for item in app.cart.cart_items))} BYN"
-                    break
+        for child in self.cart_button.children:
+            if isinstance(child, MDButtonText):
+                child.text = f"{(sum(item.total_price for item in app.cart.cart_items))} BYN"
+                break
 
     def cart_items_update(self):
         app = MDApp.get_running_app()
@@ -571,9 +573,9 @@ class MainMenuScreen(MDScreen):
 
         cart_content.bind(minimum_height=cart_content.setter('height'))
 
-        total_amount = 0
+        total_price = 0
 
-        for i, cart_item in enumerate(sorted(app.cart.cart_items, key=lambda x: x.product.name)):
+        for i, cart_item in enumerate(sorted(app.cart.cart_items, key=lambda x: x.drink.name)):
             item_layout = MDBoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
@@ -584,7 +586,7 @@ class MainMenuScreen(MDScreen):
 
             item_info = MDLabel(
                 valign="bottom",
-                text=f"{cart_item.name} {cart_item.size} {cart_item.size_unit} x {cart_item.quantity}",
+                text=f"{cart_item.drink.name} {cart_item.drink.size} {cart_item.drink.size_unit} x {cart_item.quantity}",
                 theme_text_color="Custom",
                 text_color="black",
                 size_hint_x=0.5
@@ -593,7 +595,7 @@ class MainMenuScreen(MDScreen):
             item_total = MDLabel(
                 valign="bottom",
                 halign="center",
-                text=f"{cart_item.total} BYN",
+                text=f"{cart_item.total_price} BYN",
                 theme_text_color="Custom",
                 text_color="black",
                 pos_hint={"center_x": 0.5, "center_y": 0.5},
@@ -625,11 +627,10 @@ class MainMenuScreen(MDScreen):
                 theme_font_size="Custom",
                 font_size="16sp",
             )
-            pop_button.bind(on_release=lambda x, p=cart_item.product, s=cart_item.size: self.pop_from_cart(p, s))
+            pop_button.bind(on_release=lambda x, d=cart_item.drink: self.pop_from_cart(drink=d))
 
             item_amount = sum(
-                item.quantity for item in app.cart.cart_items if item.product.drink_id == cart_item.product.drink_id
-                and item.size == cart_item.size)
+                item.quantity for item in app.cart.cart_items if item.drink.drink_id == cart_item.drink.drink_id)
 
             # Поле для отображения количества в корзине
             quantity_label = MDLabel(
@@ -652,7 +653,7 @@ class MainMenuScreen(MDScreen):
                 theme_font_size="Custom",
                 font_size="16sp",
             )
-            add_button.bind(on_release=lambda x, p=cart_item.product, s=cart_item.size: self.add_to_cart(p, s))
+            add_button.bind(on_release=lambda x, d=cart_item.drink: self.add_to_cart(drink=d))
 
             buttons_container.add_widget(pop_button)
             buttons_container.add_widget(quantity_label)
@@ -664,9 +665,9 @@ class MainMenuScreen(MDScreen):
 
             cart_content.add_widget(item_layout)
 
-            total_amount += cart_item.total
+            total_price += cart_item.total_price
 
-        self.cart_total_value_label.text = f"{total_amount} BYN"
+        self.cart_total_value_label.text = f"{total_price} BYN"
 
         self.scroll_view.add_widget(cart_content)
 
@@ -775,7 +776,7 @@ class MainMenuScreen(MDScreen):
         self.show_order_confirmation(order)
 
     def show_order_confirmation(self, order):
-        items_text = "\n".join([f"{num + 1}. {item.name} x {item.quantity} - {item.total} BYN"
+        items_text = "\n".join([f"{num + 1}. {item.drink.name} x {item.quantity} - {item.total_price} BYN"
                                 for num, item in enumerate(order.items)])
 
         dialog = MDDialog(
@@ -1105,7 +1106,7 @@ class MainMenuScreen(MDScreen):
 
             # Название товара
             name_label = MDLabel(
-                text=f"{idx + 1} {item.name} {item.size} {item.size_unit} x {item.quantity}",
+                text=f"{idx + 1} {item.drink.name} {item.drink.size} {item.drink.size_unit} x {item.quantity}",
                 theme_text_color="Custom",
                 text_color="black",
                 size_hint_x=0.5,
@@ -1114,7 +1115,7 @@ class MainMenuScreen(MDScreen):
             )
 
             total_label = MDLabel(
-                text=f"{item.total} BYN",
+                text=f"{item.total_price} BYN",
                 theme_text_color="Custom",
                 text_color="black",
                 halign="right",
@@ -1478,6 +1479,13 @@ class MainMenuScreen(MDScreen):
                                         f"Выручка: {total_revenue} BYN",
                                    theme_text_color="Custom", text_color="black"),
             MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Свернуть", theme_text_color="Custom", text_color="black"),
+                    style="text",
+                    # theme_bg_color="Custom",
+                    # md_bg_color="pink",
+                    on_release=lambda x: self.collapse_shift(dialog)
+                ),
                 MDWidget(),
                 MDButton(
                     MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
@@ -1501,6 +1509,21 @@ class MainMenuScreen(MDScreen):
         )
 
         dialog.open()
+
+    def collapse_shift(self, dialog):
+        dialog.dismiss()
+
+        self.manager.current = "login_menu"
+
+        MDSnackbar(
+            MDSnackbarText(text="Смена свернута", theme_text_color="Custom", text_color="black"),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.8,
+            theme_bg_color="Primary",
+            radius=[10, 10, 10, 10],
+            duration=1,
+        ).open()
 
     def close_shift(self, dialog):
         dialog.dismiss()

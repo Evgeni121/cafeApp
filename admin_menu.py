@@ -188,7 +188,7 @@ class AdminMenuScreen(MDScreen):
         elif self.current_menu == "Напитки":
             self.show_menu()
         elif self.current_menu == "Рецепт":
-            pass
+            self.show_menu()
         else:
             self.show_main_menu()
 
@@ -862,57 +862,26 @@ class AdminMenuScreen(MDScreen):
             )
             self.ingredients_content_list.add_widget(ingredient_item)
 
-    def show_drink_menu(self, menu_drink: MenuDrink):
+    def show_drink_menu(self, drink: Drink):
         self.current_menu = "Рецепт"
 
         self.add_back_button()
-        self.top_app_bar_title.text = f"Рецепт {menu_drink.name}"
+        self.top_app_bar_title.text = f"Рецепт"
 
         self.content_panel.clear_widgets()
 
-        length = len(menu_drink.drinks)
-        drinks = sorted(menu_drink.drinks, key=lambda x: x.size)
-
-        main_text = f"{menu_drink.name}     {drinks[0].price} | {drinks[1].price} BYN" \
-            if length > 1 else f"{menu_drink.name}     {drinks[0].price} BYN"
-
-        support_text = f"{drinks[0].size} | {drinks[1].size} {drinks[0].size_unit}" \
-            if length > 1 else f"{drinks[0].size} {drinks[0].size_unit}"
-
-        # Информация о напитке
-        drink_info = MDListItem(
-            MDListItemLeadingIcon(icon="coffee"),
-            MDListItemHeadlineText(
-                text=menu_drink.name,
-                theme_text_color="Custom",
-                text_color="black",
-            ),
-            MDListItemSupportingText(
-                text=main_text,
-                theme_text_color="Custom",
-                text_color="gray",
-            ),
-            MDListItemTertiaryText(
-                text=support_text,
-                theme_text_color="Custom",
-                text_color="gray",
-            ),
-            theme_bg_color="Custom",
-            md_bg_color=TOP_APP_BAR_COLOR,
-        )
-
-        self.content_panel.add_widget(drink_info)
+        drink.get_ingredients()
 
         # Заголовок списка ингредиентов
         ingredients_header = MDListItem(
             MDListItemLeadingIcon(icon="food-apple"),
             MDListItemHeadlineText(
-                text="Ингредиенты в составе",
+                text=f"Ингредиенты для {drink.name} {drink.size} {drink.size_unit}",
                 theme_text_color="Custom",
                 text_color="black",
             ),
             MDListItemSupportingText(
-                text=f"Всего: {len(menu_drink.ingredients)}",
+                text=f"Всего: {len(drink.drink_ingredients)}",
                 theme_text_color="Custom",
                 text_color="gray",
             ),
@@ -928,7 +897,7 @@ class AdminMenuScreen(MDScreen):
             padding=10,
         )
 
-        if not menu_drink.ingredients:
+        if not drink.drink_ingredients:
             empty_item = MDListItem(
                 MDListItemLeadingIcon(icon="food-off"),
                 MDListItemHeadlineText(
@@ -937,7 +906,7 @@ class AdminMenuScreen(MDScreen):
                     text_color="black",
                 ),
                 MDListItemSupportingText(
-                    text="Добавьте ингредиенты через меню",
+                    text="Добавьте необходимые ингредиенты",
                     theme_text_color="Custom",
                     text_color="gray",
                 ),
@@ -946,28 +915,24 @@ class AdminMenuScreen(MDScreen):
             )
             content_list.add_widget(empty_item)
         else:
-            for ingredient_data in menu_drink.ingredients:
-                ingredient = ingredient_data['ingredient']
-                amount = ingredient_data['amount']
+            for drink_ingredient in drink.drink_ingredients:
+                price = drink_ingredient.ingredient.price
+                size = drink_ingredient.ingredient.size
+                size_price = price / size
 
                 ingredient_item = MDListItem(
                     MDListItemLeadingIcon(
                         icon="water",
                     ),
                     MDListItemHeadlineText(
-                        text=ingredient.name,
+                        text=f"{drink_ingredient.ingredient.name} {drink_ingredient.amount} шт/мл/г",
                         theme_text_color="Custom",
                         text_color="black",
                     ),
                     MDListItemSupportingText(
-                        text=f"Количество: {amount} мл",
+                        text=f"{size_price * drink_ingredient.amount} BYN",
                         theme_text_color="Custom",
                         text_color="gray",
-                    ),
-                    MDListItemTertiaryText(
-                        text=f"Остаток: {ingredient.amount} мл",
-                        theme_text_color="Custom",
-                        text_color="orange" if ingredient.amount < amount else "green",
                     ),
                     MDIconButton(
                         icon="dots-vertical",
@@ -976,7 +941,7 @@ class AdminMenuScreen(MDScreen):
                         theme_bg_color="Custom",
                         md_bg_color="white",
                         pos_hint={"center_x": 0.5, "center_y": 0.5},
-                        on_release=lambda x, d=menu_drink, i=ingredient_data: self.ingredient_drink_menu(x, d, i),
+                        on_release=lambda x, d=drink, i=drink_ingredient: self.ingredient_drink_menu(x, d, i),
                     ),
                     theme_bg_color="Custom",
                     md_bg_color=TOP_APP_BAR_COLOR,
@@ -1000,7 +965,8 @@ class AdminMenuScreen(MDScreen):
             ),
             theme_bg_color="Custom",
             md_bg_color="pink",
-            on_release=lambda x, d=menu_drink: self.show_add_ingredient_to_drink_dialog(d),
+            radius=[20, 20, 20, 20],
+            on_release=lambda x, d=drink: self.show_add_ingredient_to_drink_dialog(d),
         )
         content_list.add_widget(add_button)
 
@@ -1009,18 +975,18 @@ class AdminMenuScreen(MDScreen):
 
         self.content_panel.add_widget(scroll)
 
-    def ingredient_drink_menu(self, button, menu_drink, ingredient_data):
+    def ingredient_drink_menu(self, button, menu_drink, drink_ingredient):
         """Меню для ингредиента в составе напитка"""
         menu_items = [
             {
                 "text": "Изменить количество",
                 "leading_icon": "counter",
-                "on_release": lambda x=None, d=menu_drink, i=ingredient_data: self.edit_ingredient_amount_dialog(d, i),
+                "on_release": lambda x=None, d=menu_drink, i=drink_ingredient: self.edit_ingredient_amount_dialog(d, i),
             },
             {
-                "text": "Удалить из состава",
+                "text": "Удалить",
                 "leading_icon": "trash-can-outline",
-                "on_release": lambda x=None, d=menu_drink, i=ingredient_data: self.remove_ingredient_from_drink(d, i),
+                "on_release": lambda x=None, d=menu_drink, i=drink_ingredient: self.remove_ingredient_from_drink(d, i),
             },
         ]
 
@@ -1028,11 +994,7 @@ class AdminMenuScreen(MDScreen):
         self.ingredient_dropdown_menu.caller = button
         self.ingredient_dropdown_menu.open()
 
-    def show_add_ingredient_to_drink_dialog(self, menu_drink):
-        """Диалог добавления ингредиента в напиток"""
-        self.fab_menu.dismiss() if hasattr(self, 'fab_menu') else None
-
-        # Поле поиска ингредиентов
+    def show_add_ingredient_to_drink_dialog(self, drink: Drink):
         search_field = MDTextField(
             MDTextFieldHintText(
                 text="Поиск ингредиентов...",
@@ -1042,20 +1004,16 @@ class AdminMenuScreen(MDScreen):
             mode="outlined",
         )
 
-        # Список ингредиентов для выбора
         ingredients_list = MDList(
             spacing=5,
             padding=5,
-            size_hint_y=None,
         )
-        ingredients_list.bind(minimum_height=ingredients_list.setter('height'))
 
-        # Загружаем все ингредиенты
         all_ingredients = Ingredient.get_all()
 
         for ingredient in all_ingredients:
-            # Проверяем, есть ли уже такой ингредиент в напитке
-            existing = next((i for i in menu_drink.ingredients if i['ingredient'].id == ingredient.id), None)
+            existing = next((drink_ingredient for drink_ingredient in drink.drink_ingredients
+                             if drink_ingredient.ingredient_id == ingredient.id), None)
 
             if not existing:
                 ingredient_item = MDListItem(
@@ -1072,7 +1030,7 @@ class AdminMenuScreen(MDScreen):
                     ),
                     theme_bg_color="Custom",
                     md_bg_color=TOP_APP_BAR_COLOR,
-                    on_release=lambda x, d=menu_drink, i=ingredient: self.show_ingredient_amount_dialog(d, i),
+                    on_release=lambda x, d=drink, i=ingredient: self.show_ingredient_amount_dialog(d, i),
                 )
                 ingredients_list.add_widget(ingredient_item)
 
@@ -1082,12 +1040,11 @@ class AdminMenuScreen(MDScreen):
         )
         scroll.add_widget(ingredients_list)
 
-        # Контейнер для контента
         content = MDBoxLayout(
             orientation="vertical",
-            spacing=15,
+            spacing=5,
             size_hint_y=None,
-            height=dp(400),
+            height=dp(360),
         )
         content.add_widget(search_field)
         content.add_widget(scroll)
@@ -1097,6 +1054,11 @@ class AdminMenuScreen(MDScreen):
                 text="Добавить ингредиент",
                 theme_text_color="Custom",
                 text_color="black"
+            ),
+            MDDialogSupportingText(
+                text="Укажите ингредиент",
+                theme_text_color="Custom",
+                text_color="grey"
             ),
             MDDialogContentContainer(
                 content,
@@ -1110,7 +1072,7 @@ class AdminMenuScreen(MDScreen):
                     on_release=lambda x: dialog.dismiss()
                 ),
             ),
-            size_hint=(0.9, None),
+            size_hint=(0.8, None),
             theme_bg_color="Custom",
             md_bg_color="white",
             radius=[5, 5, 5, 5],
@@ -1122,7 +1084,8 @@ class AdminMenuScreen(MDScreen):
             search_text = value.lower()
 
             for ingredient in all_ingredients:
-                existing = next((i for i in menu_drink.ingredients if i['ingredient'].id == ingredient.id), None)
+                existing = next((drink_ingredient for drink_ingredient in drink.drink_ingredients
+                                 if drink_ingredient.ingredient_id == ingredient.ingredient_id), None)
 
                 if not existing and (not search_text or search_text in ingredient.name.lower()):
                     ingredient_item = MDListItem(
@@ -1139,8 +1102,7 @@ class AdminMenuScreen(MDScreen):
                         ),
                         theme_bg_color="Custom",
                         md_bg_color=TOP_APP_BAR_COLOR,
-                        on_release=lambda x, d=menu_drink, i=ingredient: self.show_ingredient_amount_dialog(d, i,
-                                                                                                            dialog),
+                        on_release=lambda x, d=drink, i=ingredient: self.show_ingredient_amount_dialog(d, i, dialog),
                     )
                     ingredients_list.add_widget(ingredient_item)
 
@@ -1149,19 +1111,14 @@ class AdminMenuScreen(MDScreen):
         dialog.open()
 
     def show_ingredient_amount_dialog(self, menu_drink, ingredient, parent_dialog=None):
-        """Диалог ввода количества ингредиента"""
         if parent_dialog:
             parent_dialog.dismiss()
 
         amount_input = MDTextField(
             MDTextFieldHintText(
-                text="Количество, мл",
+                text="Количество, шт/мл/г",
                 theme_text_color="Custom",
                 text_color="black"
-            ),
-            MDTextFieldHelperText(
-                text=f"Доступно: {ingredient.amount} мл",
-                mode="persistent",
             ),
             mode="outlined",
             input_filter="int",
@@ -1174,7 +1131,7 @@ class AdminMenuScreen(MDScreen):
                 text_color="black"
             ),
             MDDialogSupportingText(
-                text="Введите количество в мл",
+                text="Введите количество в шт/мл/г",
                 theme_text_color="Custom",
                 text_color="grey"
             ),
@@ -1204,8 +1161,7 @@ class AdminMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def add_ingredient_to_drink(self, dialog, menu_drink, ingredient, amount_input):
-        """Добавить ингредиент в напиток"""
+    def add_ingredient_to_drink(self, dialog, drink, ingredient, amount_input):
         amount = amount_input.text.strip()
 
         if amount:
@@ -1215,17 +1171,15 @@ class AdminMenuScreen(MDScreen):
                 if amount_int <= 0:
                     raise ValueError("Количество должно быть положительным")
 
-                # Добавляем ингредиент в напиток
-                menu_drink.add_ingredient(ingredient, amount_int)
+                drink.add_ingredient(ingredient, amount_int)
 
                 dialog.dismiss()
 
-                # Обновляем экран
-                self.show_drink_menu(menu_drink)
+                self.show_drink_menu(drink)
 
                 MDSnackbar(
                     MDSnackbarText(
-                        text=f"{ingredient.name} добавлен в {menu_drink.name}",
+                        text=f"{ingredient.name} добавлен в {drink.name} успешно!",
                         theme_text_color="Custom",
                         text_color="black"
                     ),
@@ -1245,12 +1199,12 @@ class AdminMenuScreen(MDScreen):
         else:
             amount_input.error = True
 
-    def edit_ingredient_amount_dialog(self, menu_drink, ingredient_data):
+    def edit_ingredient_amount_dialog(self, menu_drink, drink_ingredient):
         """Диалог изменения количества ингредиента"""
         self.ingredient_dropdown_menu.dismiss()
 
-        ingredient = ingredient_data['ingredient']
-        current_amount = ingredient_data['amount']
+        ingredient = drink_ingredient.ingredient
+        current_amount = drink_ingredient.amount
 
         amount_input = MDTextField(
             MDTextFieldHintText(
@@ -1259,7 +1213,7 @@ class AdminMenuScreen(MDScreen):
                 text_color="black"
             ),
             MDTextFieldHelperText(
-                text=f"Текущее: {current_amount} мл | Доступно: {ingredient.amount} мл",
+                text=f"Текущее: {current_amount} шт/мл/г",
                 mode="persistent",
             ),
             mode="outlined",
@@ -1289,7 +1243,7 @@ class AdminMenuScreen(MDScreen):
                     style="filled",
                     theme_bg_color="Custom",
                     md_bg_color="pink",
-                    on_release=lambda x: self.update_ingredient_amount(dialog, menu_drink, ingredient_data,
+                    on_release=lambda x: self.update_ingredient_amount(dialog, menu_drink, drink_ingredient,
                                                                        amount_input)
                 ),
             ),
@@ -1300,7 +1254,7 @@ class AdminMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def update_ingredient_amount(self, dialog, menu_drink, ingredient_data, amount_input):
+    def update_ingredient_amount(self, dialog, menu_drink, drink_ingredient, amount_input):
         """Обновить количество ингредиента"""
         amount = amount_input.text.strip()
 
@@ -1311,12 +1265,11 @@ class AdminMenuScreen(MDScreen):
                 if amount_int <= 0:
                     raise ValueError("Количество должно быть положительным")
 
-                # Обновляем количество
-                ingredient_data['amount'] = amount_int
+                drink_ingredient.amount = amount_int
+                drink_ingredient.update()
 
                 dialog.dismiss()
 
-                # Обновляем экран
                 self.show_drink_menu(menu_drink)
 
                 MDSnackbar(
@@ -1341,11 +1294,9 @@ class AdminMenuScreen(MDScreen):
         else:
             amount_input.error = True
 
-    def remove_ingredient_from_drink(self, menu_drink, ingredient_data):
+    def remove_ingredient_from_drink(self, drink, drink_ingredient):
         """Удалить ингредиент из напитка"""
         self.ingredient_dropdown_menu.dismiss()
-
-        ingredient = ingredient_data['ingredient']
 
         dialog = MDDialog(
             MDDialogHeadlineText(
@@ -1354,7 +1305,7 @@ class AdminMenuScreen(MDScreen):
                 text_color="black"
             ),
             MDDialogSupportingText(
-                text=f"Убрать {ingredient.name} из {menu_drink.name}?",
+                text=f"Убрать {drink_ingredient.ingredient.name} из {drink.name}?",
                 theme_text_color="Custom",
                 text_color="grey"
             ),
@@ -1370,7 +1321,7 @@ class AdminMenuScreen(MDScreen):
                     style="filled",
                     theme_bg_color="Custom",
                     md_bg_color="pink",
-                    on_release=lambda x: self.process_remove_ingredient(dialog, menu_drink, ingredient_data)
+                    on_release=lambda x: self.process_remove_ingredient(dialog, drink, drink_ingredient)
                 ),
             ),
             size_hint=(0.8, None),
@@ -1380,21 +1331,15 @@ class AdminMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def process_remove_ingredient(self, dialog, menu_drink, ingredient_data):
-        """Обработать удаление ингредиента"""
-        ingredient = ingredient_data['ingredient']
-
-        # Удаляем ингредиент из напитка
-        menu_drink.ingredients.remove(ingredient_data)
+    def process_remove_ingredient(self, dialog, drink, drink_ingredient):
 
         dialog.dismiss()
 
-        # Обновляем экран
-        self.show_drink_menu(menu_drink)
+        self.show_drink_menu(drink)
 
         MDSnackbar(
             MDSnackbarText(
-                text=f"{ingredient.name} удален из состава",
+                text=f"{drink_ingredient.ingredient.name} удален успешно!",
                 theme_text_color="Custom",
                 text_color="black"
             ),
@@ -1433,43 +1378,35 @@ class AdminMenuScreen(MDScreen):
             return
 
         for menu_drink in menu_drinks:
-            length = len(menu_drink.drinks)
-            drinks = sorted(menu_drink.drinks, key=lambda x: x.size)
-
-            main_text = f"{menu_drink.name}     {drinks[0].price} | {drinks[1].price} BYN" \
-                if length > 1 else f"{menu_drink.name}     {drinks[0].price} BYN"
-
-            support_text = f"{drinks[0].size} | {drinks[1].size} {drinks[0].size_unit}" \
-                if length > 1 else f"{drinks[0].size} {drinks[0].size_unit}"
-
-            product_item = MDListItem(
-                MDListItemLeadingIcon(
-                    icon="account",
-                ),
-                MDListItemHeadlineText(
-                    text=main_text,
-                    theme_text_color="Custom",
-                    text_color="black",
-                ),
-                MDListItemSupportingText(
-                    text=support_text,
-                    theme_text_color="Custom",
-                    text_color="gray",
-                ),
-                MDIconButton(
-                    icon="dots-vertical",
-                    theme_icon_color="Custom",
-                    icon_color="black",
+            for drink in menu_drink.drinks:
+                product_item = MDListItem(
+                    MDListItemLeadingIcon(
+                        icon="account",
+                    ),
+                    MDListItemHeadlineText(
+                        text=f"{drink.name} {drink.size} {drink.size_unit}",
+                        theme_text_color="Custom",
+                        text_color="black",
+                    ),
+                    MDListItemSupportingText(
+                        text=f"{drink.price} BYN",
+                        theme_text_color="Custom",
+                        text_color="gray",
+                    ),
+                    MDIconButton(
+                        icon="dots-vertical",
+                        theme_icon_color="Custom",
+                        icon_color="black",
+                        theme_bg_color="Custom",
+                        md_bg_color="white",
+                        pos_hint={"center_x": 0.5, "center_y": 0.5},
+                        on_release=lambda x: ()
+                    ),
                     theme_bg_color="Custom",
-                    md_bg_color="white",
-                    pos_hint={"center_x": 0.5, "center_y": 0.5},
-                    on_release=lambda x: ()
-                ),
-                theme_bg_color="Custom",
-                md_bg_color=TOP_APP_BAR_COLOR,
-                on_release=lambda x, d=menu_drink: self.show_drink_menu(d),
-            )
-            content_list.add_widget(product_item)
+                    md_bg_color=TOP_APP_BAR_COLOR,
+                    on_release=lambda x, d=drink: self.show_drink_menu(d),
+                )
+                content_list.add_widget(product_item)
 
         scroll = MDScrollView()
         scroll.add_widget(content_list)

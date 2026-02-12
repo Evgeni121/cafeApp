@@ -43,7 +43,7 @@ class Drink:
 
         self._size_unit = "мл" if volume else "г"
 
-        self.ingredients: [DrinkIngredient] = []
+        self._drink_ingredients: [DrinkIngredient] = []
 
     @property
     def drink_id(self):
@@ -72,6 +72,28 @@ class Drink:
     @property
     def size_unit(self):
         return self._size_unit
+
+    @property
+    def drink_ingredients(self):
+        return self._drink_ingredients
+
+    def add_ingredient(self, ingredient, amount):
+        drink_ingredient = DrinkIngredient.insert(self, ingredient, amount)
+        if drink_ingredient:
+            self._drink_ingredients.append(drink_ingredient)
+
+    def get_ingredients(self):
+        if not self._drink_ingredients:
+            drink_ingredients_db = database.get_drink_ingredients(self._drink_id)
+
+            for drink_ingredient_db in drink_ingredients_db:
+                drink_ingredient = DrinkIngredient(self._drink_id, drink_ingredient_db[0], drink_ingredient_db[5])
+                drink_ingredient.ingredient = Ingredient(drink_ingredient_db[0], drink_ingredient_db[1], drink_ingredient_db[2],
+                                                         drink_ingredient_db[3], drink_ingredient_db[4])
+
+                self._drink_ingredients.append(drink_ingredient)
+
+        return self._drink_ingredients
 
 
 class MenuDrink:
@@ -436,7 +458,7 @@ class Shift:
 
 
 class Ingredient:
-    def __init__(self, ingredient_id, name, price, size, calories, amount):
+    def __init__(self, ingredient_id, name, price, size, calories, amount=None):
         self._ingredient_id = ingredient_id
         self._name = name
         self._price = price
@@ -456,8 +478,20 @@ class Ingredient:
         return self._name
 
     @property
+    def size(self):
+        return self._size
+
+    @property
+    def price(self):
+        return self._price
+
+    @property
     def amount(self):
         return self._amount
+
+    @property
+    def ingredient_id(self):
+        return self._ingredient_id
 
 
 class DrinkIngredient:
@@ -465,3 +499,43 @@ class DrinkIngredient:
         self._drink_id = drink_id
         self._ingredient_id = ingredient_id
         self._amount = amount
+
+        self._drink = None
+        self._ingredient = None
+
+    @property
+    def ingredient(self):
+        return self._ingredient
+
+    @ingredient.setter
+    def ingredient(self, val):
+        self._ingredient = val
+
+    @property
+    def amount(self):
+        return self._amount
+
+    @amount.setter
+    def amount(self, val):
+        self._amount = val
+
+    @property
+    def drink(self):
+        return self._drink
+
+    @classmethod
+    def insert(cls, drink: Drink, ingredient: Ingredient, amount):
+        res = database.add_drink_ingredient(drink.drink_id, ingredient.ingredient_id, amount)
+
+        if res:
+            drink_ingredient = DrinkIngredient(res[0], res[1], res[2])
+            drink_ingredient._drink = drink
+            drink_ingredient._ingredient = ingredient
+
+            return drink_ingredient
+
+    def update(self):
+        if database.update_drink_ingredient(self.drink.drink_id, self.ingredient.ingredient_id, self.amount):
+            return True
+
+        return False

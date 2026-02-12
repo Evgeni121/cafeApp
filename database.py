@@ -113,6 +113,14 @@ ingredient_table = Table(
     Column("amount", Integer),
 )
 
+drink_ingredient_table = Table(
+    "drink_ingredient",
+    metadata_obj,
+    Column("drink_id", Integer, ForeignKey("drink.id")),
+    Column("ingredient_id", Integer, ForeignKey("ingredient.id")),
+    Column("amount", Integer, ForeignKey("amount")),
+)
+
 
 class DataBase:
     def __init__(self):
@@ -408,3 +416,70 @@ class DataBase:
     @classmethod
     def add_barista(cls, name, cafe_id=CAFE_ID):
         pass
+
+    @classmethod
+    def add_drink_ingredient(cls, drink_id, ingredient_id, amount):
+        with Session() as session:
+            try:
+                stmt = drink_ingredient_table.insert().values(
+                    drink_id=drink_id,
+                    ingredient_id=ingredient_id,
+                    amount=amount
+                ).returning(
+                    drink_ingredient_table.c.drink_id,
+                    drink_ingredient_table.c.ingredient_id,
+                    drink_ingredient_table.c.amount
+                )
+                result = session.execute(stmt)
+                session.commit()
+                return result.fetchone()
+            except Exception as e:
+                session.rollback()
+                print(f"Ошибка при добавлении ингредиента к напитку: {e}")
+                return None
+
+    @classmethod
+    def get_drink_ingredients(cls, drink_id, cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt = (select(
+                ingredient_table.c.id,
+                ingredient_table.c.name,
+                ingredient_table.c.price,
+                ingredient_table.c.size,
+                ingredient_table.c.calories,
+                drink_ingredient_table.c.amount,
+            )
+                    .select_from(
+                drink_ingredient_table.join(
+                    ingredient_table,
+                    drink_ingredient_table.c.ingredient_id == ingredient_table.c.id
+                )
+            )
+                    .where(drink_ingredient_table.c.drink_id == drink_id)
+                    .where(ingredient_table.c.cafe_id == cafe_id)
+                    .order_by(ingredient_table.c.name))
+
+            result = session.execute(stmt)
+            return result.fetchall()
+
+    @classmethod
+    def update_drink_ingredient(cls, drink_id, ingredient_id, amount):
+        with Session() as session:
+            try:
+                stmt = drink_ingredient_table.update().values(
+                    amount=amount
+                ).where(
+                    drink_ingredient_table.c.drink_id == drink_id,
+                    drink_ingredient_table.c.ingredient_id == ingredient_id
+                ).returning(
+                    drink_ingredient_table.c.drink_id,
+                    drink_ingredient_table.c.ingredient_id,
+                    drink_ingredient_table.c.amount
+                )
+                result = session.execute(stmt)
+                session.commit()
+                return result.fetchone()
+            except Exception as e:
+                session.rollback()
+                print(f"Ошибка при обновлении ингредиента в напитке: {e}")
+                return None

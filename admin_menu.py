@@ -15,7 +15,7 @@ from kivymd.uix.textfield import MDTextField, MDTextFieldHintText, MDTextFieldHe
 from kivymd.uix.widget import MDWidget
 from kivymd.uix.menu import MDDropdownMenu
 
-from headers import TOP_APP_BAR_COLOR, Ingredient, Barista, Drink, MenuDrink
+from headers import TOP_APP_BAR_COLOR, Ingredient, Barista, Drink, DrinkIngredient
 
 
 class AdminMenuScreen(MDScreen):
@@ -49,7 +49,20 @@ class AdminMenuScreen(MDScreen):
         self.search_dialog = None
         self.search_input = None
 
+        self.add_dialog_ingredient_dialog = None
+
         self.build_ui()
+
+    def snack_bar(self, text):
+        MDSnackbar(
+            MDSnackbarText(text=text, theme_text_color="Custom", text_color="black"),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.8,
+            theme_bg_color="Primary",
+            radius=[10, 10, 10, 10],
+            duration=1,
+        ).open()
 
     def add_back_button(self):
         if not self.back_button_place.children:
@@ -489,6 +502,11 @@ class AdminMenuScreen(MDScreen):
     def ingredient_menu(self, button, ingredient):
         ingredient_menu = [
             {
+                "text": "Редактировать",
+                "leading_icon": "pencil",
+                "on_release": lambda x=None, i=ingredient: self.edit_ingredient(i),
+            },
+            {
                 "text": "Поступление",
                 "leading_icon": "water-plus",
                 "on_release": lambda x=None, i=ingredient: self.ingredient_arrival(i),
@@ -580,7 +598,7 @@ class AdminMenuScreen(MDScreen):
             current_search = self.search_input.text
             self.load_ingredients_list(current_search)
 
-    def process_ingredient_arrival(self, dialog, ingredient, volume_input, price_input):
+    def process_ingredient_arrival(self, dialog, ingredient: Ingredient, volume_input, price_input):
         volume = volume_input.text.strip()
         price = price_input.text.strip()
 
@@ -589,35 +607,17 @@ class AdminMenuScreen(MDScreen):
                 volume = int(volume)
                 price = float(price)
 
+                ingredient.receive(volume, price)
+
                 dialog.dismiss()
 
                 # Обновляем список с сохранением поиска
                 self.refresh_ingredients_list()
 
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"Добавлено {volume} шт/мл/г {ingredient.name}",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    y=dp(24),
-                    pos_hint={"center_x": 0.5},
-                    size_hint_x=0.7,
-                    theme_bg_color="Primary",
-                    radius=[10, 10, 10, 10],
-                    duration=1,
-                ).open()
+                self.snack_bar(f"Добавлено {volume} шт/мл/г {ingredient.name}")
 
             except ValueError as e:
-                volume_input.error = True
-                MDSnackbar(
-                    MDSnackbarText(
-                        text="Введите корректное количество",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    duration=1,
-                ).open()
+                self.snack_bar("Количество указано некорректно!")
         else:
             if not volume:
                 volume_input.error = True
@@ -694,30 +694,10 @@ class AdminMenuScreen(MDScreen):
 
                 self.refresh_ingredients_list()
 
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"Списано {volume} шт/мл/г {ingredient.name}",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    y=dp(24),
-                    pos_hint={"center_x": 0.5},
-                    size_hint_x=0.7,
-                    theme_bg_color="Primary",
-                    radius=[10, 10, 10, 10],
-                    duration=1,
-                ).open()
-
+                self.snack_bar(f"Списано {volume} шт/мл/г {ingredient.name}")
             except ValueError as e:
+                self.snack_bar("Количество указано некорректно!")
                 volume_input.error = True
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=str(e) if str(e) else "Введите корректное количество",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    duration=2,
-                ).open()
         else:
             if not volume:
                 volume_input.error = True
@@ -758,25 +738,14 @@ class AdminMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def process_ingredient_delete(self, dialog, ingredient):
+    def process_ingredient_delete(self, dialog, ingredient: Ingredient):
         dialog.dismiss()
 
-        # Обновляем список с сохранением поиска
+        ingredient.delete()
+
         self.refresh_ingredients_list()
 
-        MDSnackbar(
-            MDSnackbarText(
-                text=f"Ингредиент {ingredient.name} удален успешно!",
-                theme_text_color="Custom",
-                text_color="black"
-            ),
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.7,
-            theme_bg_color="Primary",
-            radius=[10, 10, 10, 10],
-            duration=1,
-        ).open()
+        self.snack_bar(f"Ингредиент {ingredient.name} удален успешно!")
 
     def load_ingredients_list(self, search_text=""):
         self.ingredients_content_list.clear_widgets()
@@ -793,7 +762,7 @@ class AdminMenuScreen(MDScreen):
         else:
             ingredients = all_ingredients
 
-        found_count = len(ingredients)  # Количество найденных
+        found_count = len(ingredients)
 
         if hasattr(self, 'search_input') and self.search_input:
             # Ищем HelperText внутри search_input
@@ -834,7 +803,7 @@ class AdminMenuScreen(MDScreen):
                     icon="water",
                 ),
                 MDListItemHeadlineText(
-                    text=ingredient.name,
+                    text=f"{ingredient.name} {ingredient.size} шт/мл/г {ingredient.price} BYN",
                     theme_text_color="Custom",
                     text_color="black",
                 ),
@@ -918,6 +887,7 @@ class AdminMenuScreen(MDScreen):
             for drink_ingredient in drink.drink_ingredients:
                 price = drink_ingredient.ingredient.price
                 size = drink_ingredient.ingredient.size
+                drink_ingredient.drink = drink
                 size_price = price / size
 
                 ingredient_item = MDListItem(
@@ -1013,7 +983,7 @@ class AdminMenuScreen(MDScreen):
 
         for ingredient in all_ingredients:
             existing = next((drink_ingredient for drink_ingredient in drink.drink_ingredients
-                             if drink_ingredient.ingredient_id == ingredient.id), None)
+                             if drink_ingredient.ingredient.ingredient_id == ingredient.ingredient_id), None)
 
             if not existing:
                 ingredient_item = MDListItem(
@@ -1049,7 +1019,7 @@ class AdminMenuScreen(MDScreen):
         content.add_widget(search_field)
         content.add_widget(scroll)
 
-        dialog = MDDialog(
+        self.add_dialog_ingredient_dialog = MDDialog(
             MDDialogHeadlineText(
                 text="Добавить ингредиент",
                 theme_text_color="Custom",
@@ -1069,7 +1039,7 @@ class AdminMenuScreen(MDScreen):
                 MDButton(
                     MDButtonText(text="Закрыть", theme_text_color="Custom", text_color="black"),
                     style="text",
-                    on_release=lambda x: dialog.dismiss()
+                    on_release=lambda x: self.add_dialog_ingredient_dialog.dismiss()
                 ),
             ),
             size_hint=(0.8, None),
@@ -1085,7 +1055,7 @@ class AdminMenuScreen(MDScreen):
 
             for ingredient in all_ingredients:
                 existing = next((drink_ingredient for drink_ingredient in drink.drink_ingredients
-                                 if drink_ingredient.ingredient_id == ingredient.ingredient_id), None)
+                                 if drink_ingredient.ingredient.ingredient_id == ingredient.ingredient_id), None)
 
                 if not existing and (not search_text or search_text in ingredient.name.lower()):
                     ingredient_item = MDListItem(
@@ -1102,17 +1072,143 @@ class AdminMenuScreen(MDScreen):
                         ),
                         theme_bg_color="Custom",
                         md_bg_color=TOP_APP_BAR_COLOR,
-                        on_release=lambda x, d=drink, i=ingredient: self.show_ingredient_amount_dialog(d, i, dialog),
+                        on_release=lambda x, d=drink, i=ingredient: self.show_ingredient_amount_dialog(d, i),
                     )
                     ingredients_list.add_widget(ingredient_item)
 
         search_field.bind(text=filter_ingredients)
 
+        self.add_dialog_ingredient_dialog.open()
+
+    def edit_ingredient(self, ingredient: Ingredient):
+        """Открыть диалог редактирования ингредиента"""
+        self.ingredient_dropdown_menu.dismiss()
+
+        # Создаем поля для редактирования
+        name_input = MDTextField(
+            MDTextFieldHintText(
+                text="Название",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            mode="outlined",
+            text=ingredient.name,
+        )
+
+        volume_input = MDTextField(
+            MDTextFieldHintText(
+                text="Объем, шт/мл/г",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            mode="outlined",
+            input_filter="int",
+            text=str(ingredient.size),
+        )
+
+        price_input = MDTextField(
+            MDTextFieldHintText(
+                text="Цена, BYN",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            mode="outlined",
+            input_filter="float",
+            text=str(ingredient.price),
+        )
+
+        calories_input = MDTextField(
+            MDTextFieldHintText(
+                text="Калории, Ккал/100 мл/г",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            mode="outlined",
+            input_filter="int",
+            text=str(ingredient.calories),
+        )
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(
+                text=f"Редактировать {ingredient.name}",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            MDDialogSupportingText(
+                text="Внесите новые данные",
+                theme_text_color="Custom",
+                text_color="grey"
+            ),
+            MDDialogContentContainer(
+                name_input,
+                volume_input,
+                price_input,
+                calories_input,
+                orientation="vertical",
+                spacing=15
+            ),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
+                    style="text",
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Сохранить", theme_text_color="Custom", text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.save_edited_ingredient(
+                        dialog, ingredient, name_input, volume_input, price_input, calories_input
+                    )
+                ),
+            ),
+            size_hint=(0.8, None),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
         dialog.open()
 
-    def show_ingredient_amount_dialog(self, menu_drink, ingredient, parent_dialog=None):
-        if parent_dialog:
-            parent_dialog.dismiss()
+    def save_edited_ingredient(self, dialog, ingredient, name_input, volume_input, price_input, calories_input):
+        """Сохранить изменения ингредиента"""
+        name = name_input.text.strip()
+        volume = volume_input.text.strip()
+        price = price_input.text.strip()
+        calories = calories_input.text.strip()
+
+        if name and volume and price:
+            try:
+                volume_int = int(volume)
+                price_float = float(price)
+                calories_int = int(calories) if calories else 0
+
+                ingredient.name = name
+                ingredient.price = price_float
+                ingredient.size = volume_int
+                ingredient.calories = calories_int
+                ingredient.update()
+
+                dialog.dismiss()
+
+                # Обновляем список
+                self.refresh_ingredients_list()
+
+                self.snack_bar(f"Ингредиент '{name}' обновлен успешно!")
+            except ValueError:
+                self.snack_bar("Объем или цена указаны некорректно!")
+        else:
+            if not name:
+                name_input.error = True
+            if not volume:
+                volume_input.error = True
+            if not price:
+                price_input.error = True
+
+    def show_ingredient_amount_dialog(self, menu_drink, ingredient):
+        if self.add_dialog_ingredient_dialog:
+            self.add_dialog_ingredient_dialog.dismiss()
 
         amount_input = MDTextField(
             MDTextFieldHintText(
@@ -1177,25 +1273,10 @@ class AdminMenuScreen(MDScreen):
 
                 self.show_drink_menu(drink)
 
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"{ingredient.name} добавлен в {drink.name} успешно!",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    duration=1,
-                ).open()
-
+                self.snack_bar(f"{ingredient.name} добавлен в {drink.name} успешно!")
             except ValueError as e:
                 amount_input.error = True
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=str(e) if str(e) else "Введите корректное количество",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    duration=1,
-                ).open()
+                self.snack_bar("Количество указано некорректно!")
         else:
             amount_input.error = True
 
@@ -1254,7 +1335,7 @@ class AdminMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def update_ingredient_amount(self, dialog, menu_drink, drink_ingredient, amount_input):
+    def update_ingredient_amount(self, dialog, menu_drink, drink_ingredient: DrinkIngredient, amount_input):
         """Обновить количество ингредиента"""
         amount = amount_input.text.strip()
 
@@ -1272,25 +1353,10 @@ class AdminMenuScreen(MDScreen):
 
                 self.show_drink_menu(menu_drink)
 
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"Количество обновлено",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    duration=1,
-                ).open()
-
+                self.snack_bar("Количество обновлено успешно!")
             except ValueError as e:
                 amount_input.error = True
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=str(e) if str(e) else "Введите корректное количество",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    duration=1,
-                ).open()
+                self.snack_bar("Количество казано некорректно!")
         else:
             amount_input.error = True
 
@@ -1332,19 +1398,13 @@ class AdminMenuScreen(MDScreen):
         dialog.open()
 
     def process_remove_ingredient(self, dialog, drink, drink_ingredient):
-
         dialog.dismiss()
+
+        drink.delete_ingredient(drink_ingredient)
 
         self.show_drink_menu(drink)
 
-        MDSnackbar(
-            MDSnackbarText(
-                text=f"{drink_ingredient.ingredient.name} удален успешно!",
-                theme_text_color="Custom",
-                text_color="black"
-            ),
-            duration=1,
-        ).open()
+        self.snack_bar(f"{drink_ingredient.ingredient.name} удален успешно!")
 
     def show_category_drinks(self, category):
         self.current_menu = "Напитки"
@@ -1400,7 +1460,7 @@ class AdminMenuScreen(MDScreen):
                         theme_bg_color="Custom",
                         md_bg_color="white",
                         pos_hint={"center_x": 0.5, "center_y": 0.5},
-                        on_release=lambda x: ()
+                        on_release=lambda x, d=drink: self.show_edit_drink_dialog(d)
                     ),
                     theme_bg_color="Custom",
                     md_bg_color=TOP_APP_BAR_COLOR,
@@ -1502,7 +1562,7 @@ class AdminMenuScreen(MDScreen):
                 text_color="gray"
             ),
             MDTextFieldHelperText(
-                text=f"Всего: {total_ingredients}",  # Изначально показываем общее количество
+                text=f"Всего: {total_ingredients}",
                 mode="persistent",
                 theme_text_color="Custom",
                 text_color="gray",
@@ -1682,16 +1742,7 @@ class AdminMenuScreen(MDScreen):
             Barista.create(name=name)
             self.show_baristas()
 
-            MDSnackbar(
-                MDSnackbarText(text=f"Бариста '{name}' добавлен успешно!", theme_text_color="Custom",
-                               text_color="black"),
-                y=dp(24),
-                pos_hint={"center_x": 0.5},
-                size_hint_x=0.7,
-                theme_bg_color="Primary",
-                radius=[10, 10, 10, 10],
-                duration=1,
-            ).open()
+            self.snack_bar(f"Бариста '{name}' добавлен успешно!")
         else:
             self.barista_name_input.error = True
 
@@ -1767,34 +1818,9 @@ class AdminMenuScreen(MDScreen):
                 dialog.dismiss()
                 self.show_finance()
 
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"Операция '{description}' добавлена успешно!",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    y=dp(24),
-                    pos_hint={"center_x": 0.5},
-                    size_hint_x=0.7,
-                    theme_bg_color="Primary",
-                    radius=[10, 10, 10, 10],
-                    duration=1,
-                ).open()
-
+                self.snack_bar(f"Операция '{description}' добавлена успешно!")
             except ValueError:
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"Сумма введена некорректно!",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    y=dp(24),
-                    pos_hint={"center_x": 0.5},
-                    size_hint_x=0.7,
-                    theme_bg_color="Primary",
-                    radius=[10, 10, 10, 10],
-                    duration=1,
-                ).open()
+                self.snack_bar("Сумма введена некорректно!")
         else:
             if not description:
                 self.finance_description.error = True
@@ -1897,6 +1923,8 @@ class AdminMenuScreen(MDScreen):
                 price_float = float(price)
                 calories_int = int(calories) if calories else 0
 
+                Ingredient.create(name, price_float, volume_int, calories_int)
+
                 dialog.dismiss()
 
                 # ОБНОВЛЯЕМ СПИСОК, а не пересоздаем экран!
@@ -1906,29 +1934,9 @@ class AdminMenuScreen(MDScreen):
                 if hasattr(self, 'search_input'):
                     self.search_input.text = ""
 
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"Ингредиент '{name}' добавлен успешно!",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    y=dp(24),
-                    pos_hint={"center_x": 0.5},
-                    size_hint_x=0.7,
-                    theme_bg_color="Primary",
-                    radius=[10, 10, 10, 10],
-                    duration=1,
-                ).open()
-
+                self.snack_bar(f"Ингредиент '{name}' добавлен успешно!")
             except ValueError:
-                MDSnackbar(
-                    MDSnackbarText(
-                        text=f"Объем или цена указана некорректно!",
-                        theme_text_color="Custom",
-                        text_color="black"
-                    ),
-                    duration=1,
-                ).open()
+                self.snack_bar("Объем или цена указана некорректно!")
         else:
             if not name:
                 self.ingredient_name.error = True
@@ -1966,3 +1974,103 @@ class AdminMenuScreen(MDScreen):
     def close(self, dialog):
         dialog.dismiss()
         self.manager.current = "login_menu"
+
+    def show_edit_drink_dialog(self, drink):
+        name_input = MDTextField(
+            MDTextFieldHintText(text="Название", theme_text_color="Custom", text_color="black"),
+            mode="outlined",
+            text=drink.name,
+        )
+
+        size_input = MDTextField(
+            MDTextFieldHintText(text="Объем, мл/г", theme_text_color="Custom", text_color="black"),
+            mode="outlined",
+            input_filter="int",
+            text=str(drink.size),
+        )
+
+        price_input = MDTextField(
+            MDTextFieldHintText(text="Цена, BYN", theme_text_color="Custom", text_color="black"),
+            mode="outlined",
+            input_filter="float",
+            text=str(drink.price),
+        )
+
+        calories_input = MDTextField(
+            MDTextFieldHintText(text="Калории", theme_text_color="Custom", text_color="black"),
+            mode="outlined",
+            input_filter="int",
+            text=str(drink.calories),
+        )
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(
+                text=f"Редактировать {drink.name}",
+                theme_text_color="Custom",
+                text_color="black"
+            ),
+            MDDialogContentContainer(
+                name_input,
+                size_input,
+                price_input,
+                calories_input,
+                orientation="vertical",
+                spacing=15
+            ),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
+                    style="text",
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Сохранить", theme_text_color="Custom", text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.save_edited_drink(
+                        dialog, drink, name_input, size_input, price_input, calories_input
+                    )
+                ),
+            ),
+            size_hint=(0.8, None),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
+        dialog.open()
+
+    def save_edited_drink(self, dialog, drink, name_input, size_input, price_input, calories_input):
+        name = name_input.text.strip()
+        size = size_input.text.strip()
+        price = price_input.text.strip()
+        calories = calories_input.text.strip()
+
+        if name and size and price:
+            try:
+                size_int = int(size)
+                price_float = float(price)
+                calories_int = int(calories) if calories else 0
+
+                drink.name = name
+                drink.price = price_float
+                drink.size = size_int
+                drink.calories = calories_int
+
+                if drink.update():
+                    dialog.dismiss()
+                    self.show_drink_menu(drink)
+                    self.snack_bar(f"Напиток '{name}' обновлен успешно!")
+                else:
+                    self.snack_bar("Ошибка при обновлении напитка!")
+
+            except ValueError:
+                self.snack_bar("Объем или цена указаны некорректно!")
+        else:
+            if not name:
+                name_input.error = True
+            if not size:
+                size_input.error = True
+            if not price:
+                price_input.error = True

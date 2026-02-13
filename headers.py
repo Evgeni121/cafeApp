@@ -33,13 +33,14 @@ class Category:
 
 
 class Drink:
-    def __init__(self, drink_id, category_id, name, size, price, calories, volume=None):
+    def __init__(self, drink_id, category_id, name, size, price, calories, volume=None, visible=True):
         self._drink_id = drink_id
         self._name = name
         self._category_id = category_id
         self._size = size
         self._price = price
         self._calories = calories
+        self._visible = visible
 
         self._size_unit = "мл" if volume else "г"
 
@@ -53,17 +54,33 @@ class Drink:
     def name(self):
         return self._name
 
+    @name.setter
+    def name(self, name):
+        self._name = name
+
     @property
     def size(self):
         return self._size
+
+    @size.setter
+    def size(self, size):
+        self._size = size
 
     @property
     def price(self):
         return self._price
 
+    @price.setter
+    def price(self, price):
+        self._price = price
+
     @property
     def calories(self):
         return self._calories
+
+    @calories.setter
+    def calories(self, calories):
+        self._calories = calories
 
     @property
     def category_id(self):
@@ -94,6 +111,58 @@ class Drink:
                 self._drink_ingredients.append(drink_ingredient)
 
         return self._drink_ingredients
+
+    def delete_ingredient(self, drink_ingredient):
+        if drink_ingredient in self._drink_ingredients:
+            if drink_ingredient.delete():
+                self._drink_ingredients.remove(drink_ingredient)
+
+    @property
+    def visible(self):
+        return self._visible
+
+    @visible.setter
+    def visible(self, value):
+        self._visible = value
+
+    def update(self):
+        return DataBase.update_drink(
+            drink_id=self._drink_id,
+            name=self._name,
+            price=self._price,
+            size=self._size,
+            calories=self._calories,
+            visible=self._visible
+        )
+
+    def delete(self):
+        if database.check_drink_in_orders(self._drink_id):
+            print(f"Напиток '{self._name}' используется в заказах и не может быть удален")
+            return False
+
+        return DataBase.delete_drink(self._drink_id)
+
+    def toggle_visibility(self):
+        self._visible = not self._visible
+        return self.update()
+
+    @classmethod
+    def get_by_id(cls, drink_id):
+        drink_data = DataBase.get_drink_by_id(drink_id)
+
+        if drink_data:
+            cat = Category.get_by_name("Десерты")
+            return cls(
+                drink_id=drink_data[0],
+                category_id=drink_data[1],
+                name=drink_data[2],
+                size=drink_data[3],
+                price=drink_data[4],
+                calories=drink_data[5],
+                volume=not drink_data[1] == cat.category_id
+            )
+
+        return None
 
 
 class MenuDrink:
@@ -489,9 +558,78 @@ class Ingredient:
     def amount(self):
         return self._amount
 
+    @amount.setter
+    def amount(self, amount):
+        self._amount = amount
+
+    @property
+    def calories(self):
+        return self._calories
+
     @property
     def ingredient_id(self):
         return self._ingredient_id
+
+    def update(self):
+        return database.update_ingredient(
+            self._ingredient_id,
+            self._name,
+            self._price,
+            self._size,
+            self._calories,
+            self._amount
+        )
+
+    def delete(self):
+        drink_ingredients = database.get_drink_ingredients_by_ingredient(self._ingredient_id)
+
+        if drink_ingredients:
+            print(f"Ингредиент '{self._name}' используется в {len(drink_ingredients)} напитках")
+            return False
+
+        return database.delete_ingredient(self._ingredient_id)
+
+    @classmethod
+    def create(cls, name, price, size, calories, amount=0):
+        result = database.create_ingredient(
+            name=name,
+            price=price,
+            size=size,
+            calories=calories,
+            amount=amount
+        )
+
+        if result:
+            return cls(
+                ingredient_id=result[0],
+                name=result[1],
+                price=result[2],
+                size=result[3],
+                calories=result[4],
+                amount=result[5]
+            )
+
+        return None
+
+    def receive(self, amount, price):
+        result = database.receive_ingredient(
+            ingredient_id=self._ingredient_id,
+            amount=amount,
+            price=price
+        )
+
+        if result:
+            self._amount = result[1]
+            return True
+
+        return False
+
+    def get_receive_history(self, start_date=None, end_date=None):
+        return database.get_ingredient_receives(
+            ingredient_id=self._ingredient_id,
+            start_date=start_date,
+            end_date=end_date
+        )
 
 
 class DrinkIngredient:
@@ -523,6 +661,10 @@ class DrinkIngredient:
     def drink(self):
         return self._drink
 
+    @drink.setter
+    def drink(self, drink):
+        self._drink = drink
+
     @classmethod
     def insert(cls, drink: Drink, ingredient: Ingredient, amount):
         res = database.add_drink_ingredient(drink.drink_id, ingredient.ingredient_id, amount)
@@ -536,6 +678,12 @@ class DrinkIngredient:
 
     def update(self):
         if database.update_drink_ingredient(self.drink.drink_id, self.ingredient.ingredient_id, self.amount):
+            return True
+
+        return False
+
+    def delete(self):
+        if database.delete_drink_ingredient(self.drink.drink_id, self.ingredient.ingredient_id):
             return True
 
         return False

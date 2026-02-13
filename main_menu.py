@@ -62,6 +62,17 @@ class MainMenuScreen(MDScreen):
 
         self.build_ui()
 
+    def snack_bar(self, text):
+        MDSnackbar(
+            MDSnackbarText(text=text, theme_text_color="Custom", text_color="black"),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.8,
+            theme_bg_color="Primary",
+            radius=[10, 10, 10, 10],
+            duration=1,
+        ).open()
+
     def update_for_barista(self, barista: Barista):
         self.barista = barista
 
@@ -674,16 +685,8 @@ class MainMenuScreen(MDScreen):
     def show_cart(self, *args):
         app = MDApp.get_running_app()
 
-        if not hasattr(app, 'cart') or not app.cart.cart_items:
-            MDSnackbar(
-                MDSnackbarText(text="Корзина пуста", theme_text_color="Custom", text_color="black"),
-                y=dp(24),
-                pos_hint={"center_x": 0.5},
-                size_hint_x=0.5,
-                theme_bg_color="Primary",
-                radius=[10, 10, 10, 10],
-                duration=1,
-            ).open()
+        if not app.cart.cart_items:
+            self.snack_bar("Корзина пуста")
             return
 
         total_layout = MDBoxLayout(
@@ -906,16 +909,7 @@ class MainMenuScreen(MDScreen):
         orders = shift.orders
 
         if not orders:
-            MDSnackbar(
-                MDSnackbarText(text="История заказов пуста", theme_text_color="Custom", text_color="black"),
-                y=dp(24),
-                pos_hint={"center_x": 0.5},
-                size_hint_x=0.5,
-                theme_bg_color="Primary",
-                radius=[10, 10, 10, 10],
-                duration=1,
-            ).open()
-
+            self.snack_bar("История заказов пуста")
             return
 
         header_box = MDBoxLayout(
@@ -1219,15 +1213,7 @@ class MainMenuScreen(MDScreen):
         shifts = app.shift.get_all_shifts(app.shift.barista)
 
         if not shifts:
-            MDSnackbar(
-                MDSnackbarText(text="История смен пуста", theme_text_color="Custom", text_color="black"),
-                y=dp(24),
-                pos_hint={"center_x": 0.5},
-                size_hint_x=0.5,
-                theme_bg_color="Primary",
-                radius=[10, 10, 10, 10],
-                duration=1,
-            ).open()
+            self.snack_bar("История смен пуста")
             return
 
         header_box = MDBoxLayout(
@@ -1515,15 +1501,7 @@ class MainMenuScreen(MDScreen):
 
         self.manager.current = "login_menu"
 
-        MDSnackbar(
-            MDSnackbarText(text="Смена свернута", theme_text_color="Custom", text_color="black"),
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.8,
-            theme_bg_color="Primary",
-            radius=[10, 10, 10, 10],
-            duration=1,
-        ).open()
+        self.snack_bar("Смена свернута")
 
     def close_shift(self, dialog):
         dialog.dismiss()
@@ -1539,12 +1517,4 @@ class MainMenuScreen(MDScreen):
 
         self.manager.current = "login_menu"
 
-        MDSnackbar(
-            MDSnackbarText(text="Смена успешно закрыта", theme_text_color="Custom", text_color="black"),
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.8,
-            theme_bg_color="Primary",
-            radius=[10, 10, 10, 10],
-            duration=1,
-        ).open()
+        self.snack_bar("Смена успешно закрыта")

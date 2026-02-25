@@ -9,7 +9,8 @@ from sqlalchemy.orm import sessionmaker
 CAFE_ID = 2
 
 load_dotenv()
-address = os.getenv("DATABASE_ADDRESS")
+# address = os.getenv("DATABASE_ADDRESS")
+address = os.environ.get('DATABASE_ADDRESS')
 
 if not address:
     raise "Get DATABASE_ADDRESS error!"
@@ -342,6 +343,7 @@ class DataBase:
                 order_table.c.discount_price,
                 order_table.c.drink_amount,
                 order_table.c.datetime,
+                order_table.c.is_free
             )
                     .select_from(
                 order_table

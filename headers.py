@@ -339,7 +339,8 @@ class Cart:
 
 
 class Order:
-    def __init__(self, order_id=None, shift_id=None, total_price=0, drink_amount=0, created_at=None):
+    def __init__(self, order_id=None, shift_id=None, total_price=0, drink_amount=0, created_at=None,
+                 is_free=False):
         self._order_id = order_id
         self._shift_id = shift_id
 
@@ -351,9 +352,15 @@ class Order:
         self._total_price = total_price
         self._drink_amount = drink_amount
 
+        self._is_free = is_free
+
     @property
     def order_id(self):
         return self._order_id
+
+    @property
+    def is_free(self):
+        return self._is_free
 
     @order_id.setter
     def order_id(self, order_id):
@@ -493,8 +500,9 @@ class Shift:
             self.get_orders()
 
     def get_orders(self):
-        if self.orders:
-            return
+        # if self.orders:
+        #     return
+        self.orders = []
 
         orders_db = database.get_orders(self.shift_id)
         if orders_db:
@@ -504,7 +512,8 @@ class Shift:
                     shift_id=self.shift_id,
                     total_price=order_data[1],
                     drink_amount=order_data[2],
-                    created_at=order_data[3]
+                    created_at=order_data[3],
+                    is_free=order_data[4]
                 )
 
                 self.orders.append(order)

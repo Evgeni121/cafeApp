@@ -1,5 +1,6 @@
 import asyncio
 import os
+
 from kivy.metrics import dp
 from kivy.uix.image import Image
 from kivymd.app import MDApp
@@ -789,21 +790,28 @@ class MainMenuScreen(MDScreen):
     def show_free_confirmation(self, order: Order):
         app = MDApp.get_running_app()
 
-        asyncio.run(app.telegram_bot.qr.encode_free_order(order))
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-        if os.path.exists("assets/temp/qr.png"):
+        try:
+            qr_path = loop.run_until_complete(app.telegram_bot.qr.encode_free_order(order))
+        finally:
+            loop.close()
+
+        if os.path.exists(qr_path):
             qr_image = Image(
-                source="assets/temp/qr.png",
+                source=qr_path,
                 size_hint_y=None,
-                height=170,
+                height=200,
             )
+            qr_image.reload()
         else:
             from kivy.uix.label import Label
             qr_image = Label(
                 text="QR-код\nнедоступен",
                 color=[0.5, 0.5, 0.5, 1],
                 size_hint_y=None,
-                height=170
+                height=200
             )
 
         dialog = MDDialog(
@@ -833,21 +841,28 @@ class MainMenuScreen(MDScreen):
     def show_order_confirmation(self, order):
         app = MDApp.get_running_app()
 
-        asyncio.run(app.telegram_bot.qr.encode_order(order))
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-        if os.path.exists("assets/temp/qr.png"):
+        try:
+            qr_path = loop.run_until_complete(app.telegram_bot.qr.encode_order(order))
+        finally:
+            loop.close()
+
+        if os.path.exists(qr_path):
             qr_image = Image(
-                source="assets/temp/qr.png",
+                source=qr_path,
                 size_hint_y=None,
-                height=170,
+                height=200,
             )
+            qr_image.reload()
         else:
             from kivy.uix.label import Label
             qr_image = Label(
                 text="QR-код\nнедоступен",
                 color=[0.5, 0.5, 0.5, 1],
                 size_hint_y=None,
-                height=170
+                height=200
             )
 
         dialog = MDDialog(
@@ -907,7 +922,7 @@ class MainMenuScreen(MDScreen):
                 MDListItemTertiaryText(
                     text=f"{order.drink_amount}"
                          f" {'позиций' if order.drink_amount > 4 else 'позиции' if order.drink_amount > 1 else 'позиция'}"
-                         f" на сумму {order.total_price} BYN",
+                         f" на сумму {order.total_price} {'PIG' if order.is_free else 'BYN'}",
                     theme_text_color="Custom",
                     text_color="black",
                     font_style="Title",
@@ -943,7 +958,7 @@ class MainMenuScreen(MDScreen):
             theme_text_color="Custom",
             text_color="black",
             font_size=dp(20),
-            size_hint_x=0.5
+            size_hint_x=0.3
         )
 
         total_amount = len(orders)
@@ -954,17 +969,23 @@ class MainMenuScreen(MDScreen):
             font_size=dp(20),
             bold=True,
             halign="right",
-            size_hint_x=0.5
         )
 
+        summ = 0
+        points = 0
+        for order in orders:
+            if order.is_free:
+                points += order.total_price
+            else:
+                summ += order.total_price
+
         cart_total_value_label = MDLabel(
-            text=f"{sum(order.total_price for order in orders)} BYN",
+            text=f"{summ} BYN + {points} PIG",
             theme_text_color="Custom",
             text_color="black",
             font_size=dp(20),
             bold=True,
             halign="right",
-            size_hint_x=0.5
         )
 
         self.order_total_value.add_widget(total_label)
@@ -977,6 +998,7 @@ class MainMenuScreen(MDScreen):
         app = MDApp.get_running_app()
 
         shift = target_shift or app.shift
+        shift.get_orders()
         orders = shift.orders
 
         if not orders:
@@ -1221,7 +1243,7 @@ class MainMenuScreen(MDScreen):
         )
 
         total_value = MDLabel(
-            text=f"{order.total_price} BYN",
+            text=f"{order.total_price} {'PIG' if order.is_free else 'BYN'}",
             theme_text_color="Custom",
             text_color="black",
             bold=True,
@@ -1421,7 +1443,7 @@ class MainMenuScreen(MDScreen):
             theme_text_color="Custom",
             text_color="black",
             font_size=dp(20),
-            size_hint_x=0.5
+            size_hint_x=0.3
         )
 
         total_amount = len(shifts)
@@ -1527,13 +1549,21 @@ class MainMenuScreen(MDScreen):
         app = MDApp.get_running_app()
 
         total_orders = len(app.shift.orders)
-        total_revenue = sum(order.total_price for order in app.shift.orders)
+
+        total_revenue = 0
+        total_points = 0
+        for order in app.shift.orders:
+            if order.is_free:
+                total_points += order.total_price
+            else:
+                total_revenue += order.total_price
 
         dialog = MDDialog(
             MDDialogHeadlineText(text="Закрыть смену?", theme_text_color="Custom", text_color="black"),
             MDDialogSupportingText(text="Желаете закрыть смену?\n\n"
                                         f"Заказов за смену: {total_orders}\n"
-                                        f"Выручка: {total_revenue} BYN",
+                                        f"Выручка: {total_revenue} BYN"
+                                        f"Убытки: {total_points} PIG",
                                    theme_text_color="Custom", text_color="black"),
             MDDialogButtonContainer(
                 MDButton(

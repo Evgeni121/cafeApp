@@ -4,6 +4,7 @@ from kivymd.uix.screenmanager import MDScreenManager
 
 from admin_menu import AdminMenuScreen
 from barista_menu import BaristaMenuScreen
+from bot.bot import TelegramBot
 from headers import Shift, Cart, Menu
 from login_menu import LoginMenuScreen
 from main_menu import MainMenuScreen
@@ -19,6 +20,8 @@ class PigBankApp(MDApp):
 
         self.shift: Shift = Shift()
         self.shift.get_today_shift()
+
+        self.telegram_bot = TelegramBot()
 
     def build(self):
         Window.size = (500, 700)

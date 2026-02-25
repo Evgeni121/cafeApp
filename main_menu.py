@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
-
+import asyncio
+import os
 from kivy.metrics import dp
+from kivy.uix.image import Image
 from kivymd.app import MDApp
 from kivymd.uix.appbar import MDTopAppBarTrailingButtonContainer, MDActionTopAppBarButton, MDTopAppBarTitle, \
     MDTopAppBarLeadingButtonContainer, MDTopAppBar
@@ -10,10 +11,9 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialogButtonContainer, MDDialogHeadlineText, MDDialog, MDDialogSupportingText, \
     MDDialogContentContainer
 from kivymd.uix.divider import MDDivider
-from kivymd.uix.fitimage import FitImage
 from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDListItemHeadlineText, MDListItem, MDList, MDListItemSupportingText, \
-    MDListItemTertiaryText, MDListItemTrailingIcon
+    MDListItemTertiaryText
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
@@ -22,8 +22,7 @@ from kivymd.uix.segmentedbutton import MDSegmentedButton, MDSegmentedButtonItem,
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
-from headers import Order, Barista, SECONDARY_COLOR, TOP_APP_BAR_COLOR, FOURTH_COLOR, Category, \
-    THIRD_COLOR, Shift, Drink, MenuDrink
+from headers import Order, Barista, TOP_APP_BAR_COLOR, Category, Shift, Drink, MenuDrink
 
 
 class MainMenuScreen(MDScreen):
@@ -736,14 +735,22 @@ class MainMenuScreen(MDScreen):
                 orientation="vertical",
             ),
             MDDialogButtonContainer(
-                MDWidget(),
                 MDButton(
                     MDButtonText(text="Отмена", theme_text_color="Custom", text_color="black"),
                     style="text",
                     on_release=lambda x: dialog.dismiss()
                 ),
+                MDWidget(),
                 MDButton(
-                    MDButtonText(text="Оформить заказ", theme_text_color="Custom", text_color="black"),
+                    MDButtonText(text="Баллами", theme_text_color="Custom", text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.create_order(dialog, True)
+                ),
+                MDWidget(),
+                MDButton(
+                    MDButtonText(text="На кассе", theme_text_color="Custom", text_color="black"),
                     style="filled",
                     theme_bg_color="Custom",
                     md_bg_color="pink",
@@ -756,10 +763,10 @@ class MainMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def create_order(self, dialog):
+    def create_order(self, dialog, is_free=False):
         app = MDApp.get_running_app()
 
-        if not hasattr(app, 'cart') or not app.cart.cart_items:
+        if not app.cart.cart_items:
             dialog.dismiss()
             return
 
@@ -767,28 +774,92 @@ class MainMenuScreen(MDScreen):
         for cart_item in app.cart.cart_items:
             order.add_item(cart_item)
 
-        app.shift.add_order(order)
+        if is_free:
+            self.show_free_confirmation(order)
+        else:
+            app.shift.add_order(order)
+            self.show_order_confirmation(order)
 
         app.cart.clear()
-
         dialog.dismiss()
 
         self.update_cart_counter()
         self.reset_card_counter()
 
-        self.show_order_confirmation(order)
+    def show_free_confirmation(self, order: Order):
+        app = MDApp.get_running_app()
+
+        asyncio.run(app.telegram_bot.qr.encode_free_order(order))
+
+        if os.path.exists("assets/temp/qr.png"):
+            qr_image = Image(
+                source="assets/temp/qr.png",
+                size_hint_y=None,
+                height=170,
+            )
+        else:
+            from kivy.uix.label import Label
+            qr_image = Label(
+                text="QR-код\nнедоступен",
+                color=[0.5, 0.5, 0.5, 1],
+                size_hint_y=None,
+                height=170
+            )
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(text="Заказ будет оформлен после подтверждения баланса!", theme_text_color="Custom", text_color="black"),
+            MDDialogContentContainer(
+                qr_image,
+                MDDialogSupportingText(text=f"Итого: {order.total_price} PIG",
+                                       theme_text_color="Custom", text_color="black"),
+                orientation="vertical",
+            ),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(text="OK", theme_text_color="Custom", text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: dialog.dismiss()
+                ),
+            ),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
+        dialog.open()
 
     def show_order_confirmation(self, order):
-        items_text = "\n".join([f"{num + 1}. {item.drink.name} x {item.quantity} - {item.total_price} BYN"
-                                for num, item in enumerate(order.items)])
+        app = MDApp.get_running_app()
+
+        asyncio.run(app.telegram_bot.qr.encode_order(order))
+
+        if os.path.exists("assets/temp/qr.png"):
+            qr_image = Image(
+                source="assets/temp/qr.png",
+                size_hint_y=None,
+                height=170,
+            )
+        else:
+            from kivy.uix.label import Label
+            qr_image = Label(
+                text="QR-код\nнедоступен",
+                color=[0.5, 0.5, 0.5, 1],
+                size_hint_y=None,
+                height=170
+            )
 
         dialog = MDDialog(
             MDDialogHeadlineText(text="Заказ успешно оформлен!", theme_text_color="Custom", text_color="black"),
-            MDDialogSupportingText(text=f"Номер заказа: №{order.order_id}\n"
-                                        f"Время: {order.created_at}\n\n"
-                                        f"{items_text}\n\n"
-                                        f"Итого: {order.total_price} BYN",
-                                   theme_text_color="Custom", text_color="black"),
+            MDDialogContentContainer(
+                qr_image,
+                MDDialogSupportingText(text=f"Заказ №{order.order_id}\n"
+                                            f"Время: {order.created_at}\n\n"
+                                            f"Итого: {order.total_price} BYN",
+                                       theme_text_color="Custom", text_color="black"),
+                orientation="vertical",
+            ),
             MDDialogButtonContainer(
                 MDWidget(),
                 MDButton(

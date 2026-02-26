@@ -771,7 +771,7 @@ class MainMenuScreen(MDScreen):
             dialog.dismiss()
             return
 
-        order = Order(app.shift)
+        order = Order()
         for cart_item in app.cart.cart_items:
             order.add_item(cart_item)
 
@@ -1126,8 +1126,20 @@ class MainMenuScreen(MDScreen):
         self.order_list_update()
         self.order_list_total_value_update()
 
+    def order_qr_code(self, order: Order):
+        self.order_menu.dismiss()
+        if order.cafe_user_id:
+            self.snack_bar("QR-код уже отсканирован!")
+        else:
+            self.show_order_confirmation(order)
+
     def show_order_menu(self, button, order):
         order_menu = [
+            {
+                "text": "QR",
+                "leading_icon": "qrcode",
+                "on_release": lambda x=None, o=order: self.order_qr_code(o),
+            },
             {
                 "text": "Удалить",
                 "leading_icon": "trash-can-outline",
@@ -1447,7 +1459,7 @@ class MainMenuScreen(MDScreen):
         )
 
         total_amount = len(shifts)
-        total_hours = sum(shift.total_hours for shift in shifts)
+        total_hours = sum(shift.total_hours for shift in shifts if shift.total_hours)
 
         shifts_text = f"{total_amount} {'смен' if total_amount > 4 else 'смены' if total_amount > 1 else 'смена'}"
         cart_total_amount_label = MDLabel(
@@ -1474,70 +1486,8 @@ class MainMenuScreen(MDScreen):
         self.shift_total_value.add_widget(cart_total_amount_label)
         self.shift_total_value.add_widget(cart_total_value_label)
 
-    def shift_delete(self, shift: Shift):
-        self.shift_menu.dismiss()
-
-        dialog = MDDialog(
-            MDDialogHeadlineText(
-                text="Удалить смену?",
-                theme_text_color="Custom",
-                text_color="black"),
-            MDDialogSupportingText(
-                text=f"Удалить смену {shift.start_time.strftime('%d.%m.%Y')}?",
-                theme_text_color="Custom",
-                text_color="black"),
-            MDDialogButtonContainer(
-                MDWidget(),
-                MDButton(
-                    MDButtonText(
-                        text="Отмена",
-                        theme_text_color="Custom",
-                        text_color="black"),
-                    style="text",
-                    on_release=lambda x: dialog.dismiss()
-                ),
-                MDButton(
-                    MDButtonText(
-                        text="Удалить",
-                        theme_text_color="Custom",
-                        text_color="black"),
-                    style="filled",
-                    theme_bg_color="Custom",
-                    md_bg_color="pink",
-                    on_release=lambda x: self.confirm_shift_delete(shift, dialog)
-                ),
-            ),
-            theme_bg_color="Custom",
-            md_bg_color="white",
-            radius=[5, 5, 5, 5],
-        )
-        dialog.open()
-
-    def confirm_shift_delete(self, shift: Shift, dialog):
-        app = MDApp.get_running_app()
-        app.shift.delete(shift)
-
-        dialog.dismiss()
-        self.shift_list_update()
-        self.shift_list_total_value_update()
-
     def show_shift_menu(self, button, shift):
-        menu_items = [
-            {
-                "text": "Удалить",
-                "leading_icon": "trash-can-outline",
-                "on_release": lambda x=None, o=shift: self.shift_delete(o),
-            },
-        ]
-
-        self.shift_menu = MDDropdownMenu(
-            items=menu_items,
-            width=dp(200),
-            position="auto",
-            caller=button,
-        )
-
-        self.shift_menu.open()
+        pass
 
     def switch_barista(self):
         """Смена бариста"""
@@ -1562,7 +1512,7 @@ class MainMenuScreen(MDScreen):
             MDDialogHeadlineText(text="Закрыть смену?", theme_text_color="Custom", text_color="black"),
             MDDialogSupportingText(text="Желаете закрыть смену?\n\n"
                                         f"Заказов за смену: {total_orders}\n"
-                                        f"Выручка: {total_revenue} BYN"
+                                        f"Выручка: {total_revenue} BYN\n"
                                         f"Убытки: {total_points} PIG",
                                    theme_text_color="Custom", text_color="black"),
             MDDialogButtonContainer(

@@ -19,9 +19,8 @@ class QR:
     def generate_qr(link: str):
         filepath = "assets/temp/qr.png"
 
-        if os.path.exists(filepath):
-            os.remove(filepath)
-            print("remove")
+        # if os.path.exists(filepath):
+        #     os.remove(filepath)
 
         qr = QRCode(version=1, error_correction=ERROR_CORRECT_L, box_size=8, border=4)
         qr.add_data(link)

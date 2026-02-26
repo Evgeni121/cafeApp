@@ -15,7 +15,7 @@ from kivymd.uix.textfield import MDTextField, MDTextFieldHintText, MDTextFieldHe
 from kivymd.uix.widget import MDWidget
 from kivymd.uix.menu import MDDropdownMenu
 
-from headers import TOP_APP_BAR_COLOR, Ingredient, Barista, Drink, DrinkIngredient
+from headers import TOP_APP_BAR_COLOR, Ingredient, Barista, Drink, DrinkIngredient, Shift
 
 
 class AdminMenuScreen(MDScreen):
@@ -349,14 +349,14 @@ class AdminMenuScreen(MDScreen):
         )
 
         app = MDApp.get_running_app()
-        shifts = app.shift.get_all_shifts(barista) if hasattr(app, 'shift') else []
+        shifts = app.shift.get_all_shifts(barista, closed_only=False) if hasattr(app, 'shift') else []
 
         total_hours = 0
         total_revenue = 0
         total_order_amount = 0
 
         for shift in shifts:
-            total_hours += shift.total_hours
+            total_hours += shift.total_hours if shift.total_hours else 0
             total_revenue += shift.revenue
             total_order_amount += shift.order_amount
 
@@ -400,6 +400,8 @@ class AdminMenuScreen(MDScreen):
             content_list.add_widget(no_shifts_item)
         else:
             for shift in reversed(shifts):
+                txt = f"Часы: {shift.total_hours}" if shift.total_hours is not None else "Не закрыта"
+
                 shift_item = MDListItem(
                     MDListItemLeadingIcon(
                         icon="clock",
@@ -410,7 +412,7 @@ class AdminMenuScreen(MDScreen):
                         text_color="black",
                     ),
                     MDListItemSupportingText(
-                        text=f"Заказов: {shift.order_amount} | Выручка: {shift.revenue} BYN | Часы: {shift.total_hours}",
+                        text=f"Заказов: {shift.order_amount} | Выручка: {shift.revenue} BYN | {txt}",
                         theme_text_color="Custom",
                         text_color="gray",
                     ),
@@ -421,7 +423,7 @@ class AdminMenuScreen(MDScreen):
                         theme_bg_color="Custom",
                         md_bg_color="white",
                         pos_hint={"center_x": 0.5, "center_y": 0.5},
-                        on_release=lambda x: (),
+                        on_release=lambda x, s=shift: self.show_shift_menu(x, s)
                     ),
                     theme_bg_color="Custom",
                     md_bg_color=TOP_APP_BAR_COLOR,
@@ -2074,3 +2076,68 @@ class AdminMenuScreen(MDScreen):
                 size_input.error = True
             if not price:
                 price_input.error = True
+
+    def shift_delete(self, shift: Shift):
+        self.shift_menu.dismiss()
+
+        dialog = MDDialog(
+            MDDialogHeadlineText(
+                text="Удалить смену?",
+                theme_text_color="Custom",
+                text_color="black"),
+            MDDialogSupportingText(
+                text=f"Удалить смену {shift.start_time.strftime('%d.%m.%Y')}?",
+                theme_text_color="Custom",
+                text_color="black"),
+            MDDialogButtonContainer(
+                MDWidget(),
+                MDButton(
+                    MDButtonText(
+                        text="Отмена",
+                        theme_text_color="Custom",
+                        text_color="black"),
+                    style="text",
+                    on_release=lambda x: dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(
+                        text="Удалить",
+                        theme_text_color="Custom",
+                        text_color="black"),
+                    style="filled",
+                    theme_bg_color="Custom",
+                    md_bg_color="pink",
+                    on_release=lambda x: self.confirm_shift_delete(shift, dialog)
+                ),
+            ),
+            theme_bg_color="Custom",
+            md_bg_color="white",
+            radius=[5, 5, 5, 5],
+        )
+        dialog.open()
+
+    def confirm_shift_delete(self, shift: Shift, dialog):
+        app = MDApp.get_running_app()
+        app.shift.delete(shift)
+
+        dialog.dismiss()
+        self.shift_list_update()
+        self.shift_list_total_value_update()
+
+    def show_shift_menu(self, button, shift):
+        menu_items = [
+            {
+                "text": "Удалить",
+                "leading_icon": "trash-can-outline",
+                "on_release": lambda x=None, o=shift: self.shift_delete(o),
+            },
+        ]
+
+        self.shift_menu = MDDropdownMenu(
+            items=menu_items,
+            width=dp(200),
+            position="auto",
+            caller=button,
+        )
+
+        self.shift_menu.open()

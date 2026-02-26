@@ -340,7 +340,7 @@ class Cart:
 
 class Order:
     def __init__(self, order_id=None, shift_id=None, total_price=0, drink_amount=0, created_at=None,
-                 is_free=False):
+                 is_free=False, cafe_user_id=None):
         self._order_id = order_id
         self._shift_id = shift_id
 
@@ -354,9 +354,15 @@ class Order:
 
         self._is_free = is_free
 
+        self._cafe_user_id = cafe_user_id
+
     @property
     def order_id(self):
         return self._order_id
+
+    @property
+    def cafe_user_id(self):
+        return self._cafe_user_id
 
     @property
     def is_free(self):
@@ -437,20 +443,26 @@ class Shift:
         self.is_active = False
 
     @property
-    def total_hours(self) -> int:
+    def total_hours(self) -> Optional[int]:
         start_time = self.start_time - timedelta(minutes=5)
         start_time = start_time.replace(minute=0, second=0) + timedelta(hours=1)
 
         if self.end_time:
             close_time = self.end_time.replace(minute=0, second=0)
             total_seconds = close_time.timestamp() - start_time.timestamp()
-        else:
-            close_time = datetime.now().replace(minute=0, second=0)
-            total_seconds = close_time.timestamp() - start_time.timestamp()
 
-        hours = int(total_seconds // 3600)
-        hours = 0 if hours < 0 else hours
-        return hours
+            hours = int(total_seconds // 3600)
+            hours = 0 if hours < 0 else hours
+            print(hours)
+            return hours
+        else:
+            # close_time = datetime.now().replace(minute=0, second=0)
+            # total_seconds = close_time.timestamp() - start_time.timestamp()
+            #
+            # hours = int(total_seconds // 3600)
+            # hours = 0 if hours < 0 else hours
+            print("None")
+            return None
 
     def open(self, barista: Barista):
         res = database.open_shift(cafe_user_id=barista.barista_id)
@@ -513,7 +525,8 @@ class Shift:
                     total_price=order_data[1],
                     drink_amount=order_data[2],
                     created_at=order_data[3],
-                    is_free=order_data[4]
+                    is_free=order_data[4],
+                    cafe_user_id=order_data[5],
                 )
 
                 self.orders.append(order)
@@ -521,10 +534,15 @@ class Shift:
                 self.revenue += order.total_price
 
     @classmethod
-    def get_all_shifts(cls, barista: Barista) -> [Self]:
-        shifts_db = database.get_all_shifts(barista_id=barista.barista_id)
-        return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=barista,
-                      order_amount=shift[3], revenue=shift[4]) for shift in shifts_db]
+    def get_all_shifts(cls, barista: Barista, closed_only=True) -> [Self]:
+        if closed_only:
+            shifts_db = database.get_all_closed_shifts(barista_id=barista.barista_id)
+        else:
+            shifts_db = database.get_all_shifts(barista_id=barista.barista_id)
+
+        if shifts_db:
+            return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=barista,
+                          order_amount=shift[3], revenue=shift[4]) for shift in shifts_db]
 
     def delete_order(self, order: Order):
         if database.delete_order(order.order_id):

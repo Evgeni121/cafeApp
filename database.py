@@ -232,7 +232,7 @@ class DataBase:
             return result.first()
 
     @classmethod
-    def get_all_shifts(cls, barista_id: int, cafe_id=CAFE_ID):
+    def get_all_closed_shifts(cls, barista_id: int, cafe_id=CAFE_ID):
         with Session() as session:
             stmt = (select(
                 work_shift_table.c.id,
@@ -247,6 +247,26 @@ class DataBase:
                     .where(work_shift_table.c.cafe_user_id == barista_id)
                     .where(work_shift_table.c.is_paid.is_(False))
                     .where(work_shift_table.c.close_datetime.is_not(None))
+                    .order_by(work_shift_table.c.datetime))
+
+            result = session.execute(stmt)
+            return result.fetchall()
+
+    @classmethod
+    def get_all_shifts(cls, barista_id: int, cafe_id=CAFE_ID):
+        with Session() as session:
+            stmt = (select(
+                work_shift_table.c.id,
+                work_shift_table.c.datetime,
+                work_shift_table.c.close_datetime,
+                work_shift_table.c.order_amount,
+                work_shift_table.c.revenue,
+            )
+                    .join(cafe_user_table, work_shift_table.c.cafe_user_id == cafe_user_table.c.id)
+                    .join(user_table, cafe_user_table.c.user_id == user_table.c.id)
+                    .where(work_shift_table.c.cafe_id == cafe_id)
+                    .where(work_shift_table.c.cafe_user_id == barista_id)
+                    .where(work_shift_table.c.is_paid.is_(False))
                     .order_by(work_shift_table.c.datetime))
 
             result = session.execute(stmt)
@@ -343,7 +363,8 @@ class DataBase:
                 order_table.c.discount_price,
                 order_table.c.drink_amount,
                 order_table.c.datetime,
-                order_table.c.is_free
+                order_table.c.is_free,
+                order_table.c.cafe_user_id
             )
                     .select_from(
                 order_table

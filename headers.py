@@ -351,7 +351,7 @@ class Cart:
 
 class Order:
     def __init__(self, order_id=None, shift_id=None, total_price=0, drink_amount=0, created_at=None,
-                 is_free=False, cafe_user_id=None, discount=None, discount_price=None):
+                 is_free=False, cafe_user_id=None, discount=0, discount_price=None):
         self._order_id = order_id
         self._shift_id = shift_id
 
@@ -367,7 +367,7 @@ class Order:
 
         self._cafe_user_id = cafe_user_id
 
-        self._discount = discount
+        self._discount: int = discount
         self._discount_price = discount_price
 
     @property
@@ -387,11 +387,11 @@ class Order:
         self._order_id = order_id
 
     @property
-    def discount(self):
+    def discount(self) -> int:
         return self._discount
 
     @discount.setter
-    def discount(self, discount):
+    def discount(self, discount: int):
         self._discount = discount
 
     @property
@@ -429,6 +429,7 @@ class Order:
             cat = Category.get_by_name("Десерты")
             self._total_price = 0
             self._drink_amount = 0
+            self._discount_price = 0
 
             for item in items_db:
                 drink = Drink(item[0], item[1], item[2], item[3], item[4], item[5],

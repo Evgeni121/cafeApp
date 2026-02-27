@@ -88,7 +88,7 @@ order_table = Table(
     Column("complete_time", Date),
     Column("price", Float),
     Column("cafe_id", Integer),
-    Column("discount", Float),
+    Column("discount", Integer),
     Column("discount_price", Float),
     Column("shift_id", Integer, ForeignKey("work_shift.id")),
     Column("drink_amount", Integer),
@@ -361,7 +361,7 @@ class DataBase:
         with Session() as session:
             stmt = (select(
                 order_table.c.id,
-                order_table.c.discount_price,
+                order_table.c.price,
                 order_table.c.drink_amount,
                 order_table.c.datetime,
                 order_table.c.is_free,

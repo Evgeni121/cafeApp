@@ -705,7 +705,7 @@ class MainMenuScreen(MDScreen):
             text_color="black",
             font_size=dp(20),
             bold=True,
-            size_hint_x=0.5
+            size_hint_x=0.3
         )
 
         self.cart_total_value_label = MDLabel(
@@ -1036,7 +1036,7 @@ class MainMenuScreen(MDScreen):
                 MDListItemTertiaryText(
                     text=f"{order.drink_amount}"
                          f" {'позиций' if order.drink_amount > 4 else 'позиции' if order.drink_amount > 1 else 'позиция'}"
-                         f" на сумму {order.total_price} {'PIG' if order.is_free else 'BYN'}",
+                         f" на сумму {order.discount_price} {'PIG' if order.is_free else 'BYN'}",
                     theme_text_color="Custom",
                     text_color="black",
                     font_style="Title",
@@ -1082,7 +1082,6 @@ class MainMenuScreen(MDScreen):
             text_color="black",
             font_size=dp(20),
             bold=True,
-            halign="right",
         )
 
         summ = 0
@@ -1091,7 +1090,7 @@ class MainMenuScreen(MDScreen):
             if order.is_free:
                 points += order.total_price
             else:
-                summ += order.total_price
+                summ += order.discount_price
 
         cart_total_value_label = MDLabel(
             text=f"{summ} BYN + {points} PIG",
@@ -1354,7 +1353,7 @@ class MainMenuScreen(MDScreen):
             theme_text_color="Custom",
             text_color="black",
             font_size="18sp",
-            size_hint_x=0.5,
+            size_hint_x=0.3,
         )
 
         total_amount = MDLabel(
@@ -1364,17 +1363,18 @@ class MainMenuScreen(MDScreen):
             text_color="black",
             bold=True,
             font_size="22sp",
-            size_hint_x=0.3,
+            size_hint_x=0.5,
             halign="right"
         )
 
         total_value = MDLabel(
-            text=f"{order.total_price} {'PIG' if order.is_free else 'BYN'}",
+            text=f"{order.total_price} {'PIG' if order.is_free else 'BYN'} - {order.discount}% = "
+                 f"{order.discount_price} {'PIG' if order.is_free else 'BYN'}",
             theme_text_color="Custom",
             text_color="black",
             bold=True,
             font_size="22sp",
-            size_hint_x=0.3,
+            size_hint_x=0.5,
             halign="right"
         )
 
@@ -1582,8 +1582,6 @@ class MainMenuScreen(MDScreen):
             text_color="black",
             font_size=dp(20),
             bold=True,
-            halign="right",
-            size_hint_x=0.5
         )
 
         cart_total_value_label = MDLabel(
@@ -1593,7 +1591,6 @@ class MainMenuScreen(MDScreen):
             font_size=dp(20),
             bold=True,
             halign="right",
-            size_hint_x=0.5
         )
 
         self.shift_total_value.add_widget(total_label)
@@ -1620,7 +1617,7 @@ class MainMenuScreen(MDScreen):
             if order.is_free:
                 total_points += order.total_price
             else:
-                total_revenue += order.total_price
+                total_revenue += order.discount_price
 
         dialog = MDDialog(
             MDDialogHeadlineText(text="Закрыть смену?", theme_text_color="Custom", text_color="black"),

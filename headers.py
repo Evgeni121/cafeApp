@@ -351,7 +351,7 @@ class Cart:
 
 class Order:
     def __init__(self, order_id=None, shift_id=None, total_price=0, drink_amount=0, created_at=None,
-                 is_free=False, cafe_user_id=None):
+                 is_free=False, cafe_user_id=None, discount=None, discount_price=None):
         self._order_id = order_id
         self._shift_id = shift_id
 
@@ -366,6 +366,9 @@ class Order:
         self._is_free = is_free
 
         self._cafe_user_id = cafe_user_id
+
+        self._discount = discount
+        self._discount_price = discount_price
 
     @property
     def order_id(self):
@@ -384,8 +387,20 @@ class Order:
         self._order_id = order_id
 
     @property
+    def discount(self):
+        return self._discount
+
+    @discount.setter
+    def discount(self, discount):
+        self._discount = discount
+
+    @property
     def total_price(self):
         return self._total_price
+
+    @property
+    def discount_price(self):
+        return self._discount_price or self._total_price * (1 - self.discount / 100)
 
     @property
     def created_at(self):
@@ -504,7 +519,7 @@ class Shift:
             self.orders.append(order)
 
             self.order_amount += 1
-            self.revenue += order.total_price
+            self.revenue += order.discount_price
 
     def get_today_shift(self):
         shift_db = database.get_today_open_shift()
@@ -536,6 +551,8 @@ class Shift:
                     created_at=order_data[3],
                     is_free=order_data[4],
                     cafe_user_id=order_data[5],
+                    discount=order_data[6],
+                    discount_price=order_data[7],
                 )
 
                 self.orders.append(order)
@@ -552,6 +569,7 @@ class Shift:
         if shifts_db:
             return [Shift(shift_id=shift[0], start_time=shift[1], end_time=shift[2], barista=barista,
                           order_amount=shift[3], revenue=shift[4]) for shift in shifts_db]
+        return []
 
     def delete_order(self, order: Order):
         if database.delete_order(order.order_id):

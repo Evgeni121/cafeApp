@@ -885,6 +885,7 @@ class MainMenuScreen(MDScreen):
             return
 
         order = Order()
+        order.discount = app.cart.discount
         for cart_item in app.cart.cart_items:
             order.add_item(cart_item)
 
@@ -931,7 +932,7 @@ class MainMenuScreen(MDScreen):
             MDDialogHeadlineText(text="Заказ будет оформлен после подтверждения баланса!", theme_text_color="Custom", text_color="black"),
             MDDialogContentContainer(
                 qr_image,
-                MDDialogSupportingText(text=f"Итого: {order.total_price} PIG",
+                MDDialogSupportingText(text=f"Итого: {order.total_price} PIG - {order.discount}% = {order.discount_price} PIG",
                                        theme_text_color="Custom", text_color="black"),
                 orientation="vertical",
             ),
@@ -951,7 +952,7 @@ class MainMenuScreen(MDScreen):
         )
         dialog.open()
 
-    def show_order_confirmation(self, order):
+    def show_order_confirmation(self, order: Order):
         app = MDApp.get_running_app()
 
         loop = asyncio.new_event_loop()
@@ -984,7 +985,7 @@ class MainMenuScreen(MDScreen):
                 qr_image,
                 MDDialogSupportingText(text=f"Заказ №{order.order_id}\n"
                                             f"Время: {order.created_at}\n\n"
-                                            f"Итого: {order.total_price} BYN",
+                                            f"Итого: {order.total_price} BYN - {order.discount}% = {order.discount_price} BYN",
                                        theme_text_color="Custom", text_color="black"),
                 orientation="vertical",
             ),
@@ -1546,7 +1547,7 @@ class MainMenuScreen(MDScreen):
                     icon_color="black",
                     theme_bg_color="Custom",
                     md_bg_color="white",
-                    pos_hint={"center_x": 0.5, "center_y": 0.7},
+                    pos_hint={"center_x": 0.5, "center_y": 0.5},
                     on_release=lambda x, s=shift: self.show_shift_menu(x, s)
                 ),
                 divider=True,
@@ -1624,6 +1625,7 @@ class MainMenuScreen(MDScreen):
         dialog = MDDialog(
             MDDialogHeadlineText(text="Закрыть смену?", theme_text_color="Custom", text_color="black"),
             MDDialogSupportingText(text="Желаете закрыть смену?\n\n"
+                                        f"Открыта: {app.shift.start_time.strftime('%H:%M')}\n"
                                         f"Заказов за смену: {total_orders}\n"
                                         f"Выручка: {total_revenue} BYN\n"
                                         f"Убытки: {total_points} PIG",

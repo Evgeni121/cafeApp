@@ -310,7 +310,8 @@ class DataBase:
             stmt_order = order_table.insert().values(
                 is_free=False,
                 price=order.total_price,
-                discount_price=order.total_price,
+                discount=order.discount,
+                discount_price=order.discount_price,
                 datetime=datetime.now(),
                 time=datetime.now(),
                 complete_time=datetime.now(),
@@ -364,7 +365,9 @@ class DataBase:
                 order_table.c.drink_amount,
                 order_table.c.datetime,
                 order_table.c.is_free,
-                order_table.c.cafe_user_id
+                order_table.c.cafe_user_id,
+                order_table.c.discount,
+                order_table.c.discount_price,
             )
                     .select_from(
                 order_table

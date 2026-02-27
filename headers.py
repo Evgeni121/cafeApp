@@ -309,9 +309,19 @@ class Cart:
     def __init__(self):
         self._cart_items: [CartItem] = []
 
+        self._discount = 0
+
     @property
     def cart_items(self):
         return self._cart_items
+
+    @property
+    def discount(self):
+        return self._discount
+
+    @discount.setter
+    def discount(self, val):
+        self._discount = val
 
     def add_drink(self, drink: Drink):
         cart_item = next((cart_item for cart_item in self._cart_items if cart_item.drink.drink_id == drink.drink_id), None)
@@ -331,10 +341,11 @@ class Cart:
                 self._cart_items.remove(cart_item)
 
     @property
-    def total_price(self):
-        return sum(lambda x: item.total_price for item in self._cart_items)
+    def total_price(self) -> float:
+        return sum(item.total_price for item in self._cart_items) * (1 - self.discount / 100)
 
     def clear(self):
+        self.discount = 0
         self._cart_items.clear()
 
 
@@ -453,7 +464,6 @@ class Shift:
 
             hours = int(total_seconds // 3600)
             hours = 0 if hours < 0 else hours
-            print(hours)
             return hours
         else:
             # close_time = datetime.now().replace(minute=0, second=0)
@@ -461,7 +471,6 @@ class Shift:
             #
             # hours = int(total_seconds // 3600)
             # hours = 0 if hours < 0 else hours
-            print("None")
             return None
 
     def open(self, barista: Barista):

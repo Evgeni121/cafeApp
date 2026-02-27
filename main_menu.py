@@ -20,10 +20,11 @@ from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.segmentedbutton import MDSegmentedButton, MDSegmentedButtonItem, MDSegmentButtonLabel
+from kivymd.uix.selectioncontrol import MDCheckbox, MDSwitch
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
-from headers import Order, Barista, TOP_APP_BAR_COLOR, Category, Shift, Drink, MenuDrink
+from headers import Order, Barista, TOP_APP_BAR_COLOR, Category, Drink, MenuDrink
 
 
 class MainMenuScreen(MDScreen):
@@ -562,8 +563,13 @@ class MainMenuScreen(MDScreen):
 
         for child in self.cart_button.children:
             if isinstance(child, MDButtonText):
-                child.text = f"{(sum(item.total_price for item in app.cart.cart_items))} BYN"
+                child.text = f"{app.cart.total_price:.2f} BYN"
                 break
+
+    def update_cart_total_value(self):
+        app = MDApp.get_running_app()
+
+        self.cart_total_value_label.text = f"{app.cart.total_price:.2f} BYN"
 
     def cart_items_update(self):
         app = MDApp.get_running_app()
@@ -583,8 +589,6 @@ class MainMenuScreen(MDScreen):
         )
 
         cart_content.bind(minimum_height=cart_content.setter('height'))
-
-        total_price = 0
 
         for i, cart_item in enumerate(sorted(app.cart.cart_items, key=lambda x: x.drink.name)):
             item_layout = MDBoxLayout(
@@ -676,9 +680,7 @@ class MainMenuScreen(MDScreen):
 
             cart_content.add_widget(item_layout)
 
-            total_price += cart_item.total_price
-
-        self.cart_total_value_label.text = f"{total_price} BYN"
+        self.update_cart_total_value()
 
         self.scroll_view.add_widget(cart_content)
 
@@ -726,12 +728,115 @@ class MainMenuScreen(MDScreen):
 
         self.cart_items_update()
 
+        # Создаем контейнер для выбора скидки
+        discount_container = MDBoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height=dp(150),
+            spacing=5,
+            padding=[5, 5, 5, 5],
+        )
+
+        discount_label = MDLabel(
+            text="Укажите скидку:",
+            theme_text_color="Custom",
+            text_color="black",
+            font_size=dp(16),
+            bold=True,
+            size_hint_y=None,
+            height=dp(30)
+        )
+        discount_container.add_widget(discount_label)
+
+        # ОПРЕДЕЛЯЕМ ФУНКЦИИ ПЕРВЫМИ!
+        def update_price():
+            if switch_10.active:
+                discount = 10
+            elif switch_30.active:
+                discount = 30
+            elif switch_50.active:
+                discount = 50
+            else:
+                discount = 0
+
+            app.cart.discount = discount
+
+            self.update_cart_counter()
+            self.update_cart_total_value()
+
+        def on_switch_activate(active_switch, value):
+            if value:
+                if active_switch != switch_10:
+                    switch_10.active = False
+                if active_switch != switch_30:
+                    switch_30.active = False
+                if active_switch != switch_50:
+                    switch_50.active = False
+
+            update_price()
+
+        # ТЕПЕРЬ СОЗДАЕМ SWITCH С ACTIVE ПРИ СОЗДАНИИ
+        # Строка с MDSwitch для скидки 10%
+        row_10 = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(32),
+        )
+        row_10.add_widget(MDLabel(text="Скидка 10%"))
+        switch_10 = MDSwitch(
+            thumb_color_active="pink",
+            thumb_color_inactive="grey",
+            track_color_active="lightgrey",
+            track_color_inactive="white",
+            on_active=lambda x, y: on_switch_activate(switch_10, y)
+        )
+        row_10.add_widget(switch_10)
+        discount_container.add_widget(row_10)
+
+        # Строка с MDSwitch для скидки 30%
+        row_30 = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(32),
+        )
+        row_30.add_widget(MDLabel(text="Скидка 30%"))
+        switch_30 = MDSwitch(
+            thumb_color_active="pink",
+            thumb_color_inactive="grey",
+            track_color_active="lightgrey",
+            track_color_inactive="white",
+            on_active=lambda x, y: on_switch_activate(switch_30, y)
+        )
+        row_30.add_widget(switch_30)
+        discount_container.add_widget(row_30)
+
+        # Строка с MDSwitch для скидки 50%
+        row_50 = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(32),
+        )
+        row_50.add_widget(MDLabel(text="Скидка 50%"))
+        switch_50 = MDSwitch(
+            thumb_color_active="pink",
+            thumb_color_inactive="grey",
+            track_color_active="lightgrey",
+            track_color_inactive="white",
+            on_active=lambda x, y: on_switch_activate(switch_50, y)
+        )
+        row_50.add_widget(switch_50)
+        discount_container.add_widget(row_50)
+
+        # Устанавливаем начальную цену
+        self.cart_total_value_label.text = f"{app.cart.total_price:.2f} BYN"
+
         dialog = MDDialog(
             MDDialogHeadlineText(text="Корзина", theme_text_color="Custom", text_color="black"),
             MDDialogContentContainer(
                 MDDivider(),
                 self.scroll_view,
                 MDDivider(),
+                discount_container,
                 total_layout,
                 orientation="vertical",
             ),
@@ -762,7 +867,15 @@ class MainMenuScreen(MDScreen):
             md_bg_color="white",
             radius=[5, 5, 5, 5],
         )
+
         dialog.open()
+
+        if app.cart.discount == 10:
+            switch_10.active = True
+        elif app.cart.discount == 30:
+            switch_30.active = True
+        elif app.cart.discount == 50:
+            switch_50.active = True
 
     def create_order(self, dialog, is_free=False):
         app = MDApp.get_running_app()
@@ -1129,7 +1242,7 @@ class MainMenuScreen(MDScreen):
     def order_qr_code(self, order: Order):
         self.order_menu.dismiss()
         if order.cafe_user_id:
-            self.snack_bar("QR-код уже отсканирован!")
+            self.snack_bar("QR-код уже использован!")
         else:
             self.show_order_confirmation(order)
 

@@ -1,4 +1,3 @@
-from kivy.metrics import dp
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDButton, MDButtonText, MDButtonIcon
@@ -8,9 +7,9 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDList
 from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from kivymd.uix.widget import MDWidget
 
+from common import snack_bar
 from headers import Barista, THIRD_COLOR
 
 
@@ -130,19 +129,7 @@ class BaristaMenuScreen(MDScreen):
         cafe_screen = self.manager.get_screen("main_menu")
         cafe_screen.update_for_barista(app.shift.barista)
 
-        MDSnackbar(
-            MDSnackbarText(
-                text=f"Смена открыта для бариста {barista.name}",
-                theme_text_color="Custom",
-                text_color="black"
-            ),
-            y=dp(24),
-            pos_hint={"center_x": 0.5},
-            size_hint_x=0.8,
-            theme_bg_color="Primary",
-            radius=[10, 10, 10, 10],
-            duration=1,
-        ).open()
+        snack_bar(f"Смена открыта для бариста {barista.name} успешно")
 
     def go_back(self, *args):
         self.manager.current = "login_menu"

@@ -33,7 +33,7 @@ class QR:
     # ---------------------------------------------------------------------------------
     async def encode_order(self, order: Order):
         code = int(datetime.datetime.now().timestamp())
-        link = await create_start_link(self.bot, f'{self.QR_PURCHASE_KEY}{order.order_id}_{code}', encode=True)
+        link = await create_start_link(self.bot, f'{self.QR_PURCHASE_KEY}{code}_{order.order_id}', encode=True)
         filepath = self.generate_qr(link)
 
         return filepath
@@ -42,7 +42,7 @@ class QR:
         ids = "_".join([str(item.drink.drink_id) for item in order.items for _ in range(item.quantity)])
 
         code = int(datetime.datetime.now().timestamp())
-        link = await create_start_link(self.bot, f'{self.QR_FREE_KEY}{ids}_{code}', encode=True)
+        link = await create_start_link(self.bot, f'{self.QR_FREE_KEY}{code}_{ids}', encode=True)
         filepath = self.generate_qr(link)
 
         return filepath
